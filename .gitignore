@@ -1,0 +1,8 @@
+.venv/
+model_server/__pycache__/
+logs/
+plots/
+server/node_modules/
+server/.env
+src/__pycache__/
+*.png
