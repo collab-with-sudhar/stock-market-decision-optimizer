@@ -6,3 +6,5 @@ server/node_modules/
 server/.env
 src/__pycache__/
 *.png
+archives/
+*.zip
