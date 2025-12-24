@@ -3,7 +3,7 @@ const sendToken = (user, statusCode, res) => {
 
   const options = {
     expires: new Date(
-      Date.now() + process.env.COOKIE_EXPIRE * 60 * 1000
+      Date.now() + process.env.COOKIE_EXPIRE * 60 * 24 * 1000
     ),
     httpOnly: true,
     sameSite: "lax",
@@ -15,7 +15,7 @@ const sendToken = (user, statusCode, res) => {
     .cookie("role", user.role, options)
     .json({
       success: true,
-      token,
+      // Token is stored in httpOnly cookie, not returned in JSON for security
       role: user.role,
       user: {
         id: user._id,

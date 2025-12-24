@@ -6,6 +6,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
 import { addTick } from '../redux/chartSlice.js';
 import { addSignal } from '../redux/signalsSlice.js';
+import { useToast } from '../contexts/useToast.js';
+import { createOrderStart, createOrderSuccess, createOrderFailure } from '../redux/ordersSlice.js';
+import {
+  updatePortfolioStart,
+  updatePortfolioSuccess,
+  updatePortfolioFailure,
+} from '../redux/portfolioSlice.js';
 
 // Socket is initialized within AISignals component to avoid global reconnect loops.
 
@@ -140,7 +147,24 @@ const CandleChart = ({ candles }) => {
           }}
           labelStyle={{ color: '#8F7A7A', fontSize: '11px', fontWeight: 'bold' }}
           itemStyle={{ fontSize: '12px', fontFamily: 'IBM Plex Mono' }}
-          formatter={(value) => [value?.toFixed(2)]}
+          cursor={{ fill: 'rgba(209, 150, 139, 0.1)' }}
+          content={({ active, payload }) => {
+            if (active && payload && payload[0]) {
+              const candle = payload[0].payload;
+              return (
+                <div className="bg-[#0F0F0F] border-2 border-landing-primary rounded-lg p-3 backdrop-blur-sm shadow-2xl">
+                  <p className="text-landing-primary font-bold text-xs mb-3 uppercase tracking-wider border-b border-landing-primary/30 pb-2">{candle.label}</p>
+                  <div className="space-y-2 font-mono text-xs">
+                    <p><span className="font-bold text-emerald-300 bg-emerald-900/30 px-2 py-1 rounded">O:</span> <span className="text-white font-bold">₹{candle.open?.toFixed(2)}</span></p>
+                    <p><span className="font-bold text-cyan-300 bg-cyan-900/30 px-2 py-1 rounded">H:</span> <span className="text-white font-bold">₹{candle.high?.toFixed(2)}</span></p>
+                    <p><span className="font-bold text-orange-300 bg-orange-900/30 px-2 py-1 rounded">L:</span> <span className="text-white font-bold">₹{candle.low?.toFixed(2)}</span></p>
+                    <p className="border-t border-landing-primary/30 pt-2"><span className="font-bold text-landing-primary bg-landing-primary/20 px-2 py-1 rounded">C:</span> <span className="text-landing-primary font-bold text-sm">₹{candle.close?.toFixed(2)}</span></p>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          }}
         />
         <Bar dataKey="open" isAnimationActive={false} shape={<CandleShape candles={candles} />} />
       </ComposedChart>
@@ -190,6 +214,24 @@ export const AISignals = () => {
   const dispatch = useDispatch();
   const candles = useSelector((state) => state.chart.candles);
   const signals = useSelector((state) => state.signals.signals);
+  const [marketOpen, setMarketOpen] = React.useState(false);
+
+  useEffect(() => {
+    const fetchMarketStatus = async () => {
+      try {
+        const { default: axiosInstance } = await import('../api/axiosInstance.js');
+        const response = await axiosInstance.get('/market/status');
+        if (response.data?.success) {
+          setMarketOpen(response.data.marketOpen);
+        }
+      } catch (error) {
+        console.error('Error fetching market status:', error);
+      }
+    };
+    fetchMarketStatus();
+    const interval = setInterval(fetchMarketStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const socket = io('http://localhost:4000', {
@@ -229,26 +271,26 @@ export const AISignals = () => {
       <div className="absolute -top-20 -right-20 w-80 h-80 bg-landing-primary/10 rounded-full blur-[80px] pointer-events-none"></div>
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 z-10">
-        <div>
-          <h3 className="text-2xl font-display font-bold text-landing-text dark:text-white mb-1">Live Market & AI</h3>
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-landing-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-landing-primary"></span>
-            </span>
-            <span className="text-xs font-bold text-landing-muted tracking-widest uppercase">NIFTY 50 Live</span>
+        <div className="flex items-center justify-between mb-6 z-10">
+          <div>
+            <h3 className="text-2xl font-display font-bold text-landing-text dark:text-white mb-1">Live Market & AI Signals</h3>
+            <div className="flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${marketOpen ? 'bg-landing-primary' : 'bg-red-500'} opacity-75`}></span>
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${marketOpen ? 'bg-landing-primary' : 'bg-red-500'}`}></span>
+          </span>
+          <span className="text-xs font-bold text-landing-muted tracking-widest uppercase">NIFTY 50 {marketOpen ? 'Live' : 'Market Closed'}</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-landing-muted uppercase tracking-widest mb-1">Current Price</p>
+            <p className="text-3xl font-display font-bold text-landing-text dark:text-white font-mono">
+          {candles[candles.length - 1]?.close?.toFixed(2) ?? '—'}
+            </p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-landing-muted uppercase tracking-widest mb-1">Current Price</p>
-          <p className="text-3xl font-display font-bold text-landing-text dark:text-white font-mono">
-            {candles[candles.length - 1]?.close?.toFixed(2) ?? '—'}
-          </p>
-        </div>
-      </div>
 
-      {/* Charts Area */}
+        {/* Charts Area */}
       <div className="flex-1 w-full relative rounded-2xl overflow-hidden bg-[#FDF9F9] dark:bg-[#161212] border border-landing-primary/5 mb-6 shadow-inner">
         <div style={{ height: '70%', width: '100%' }} className="pt-4">
           <CandleChart candles={candles} />
@@ -269,35 +311,56 @@ export const AISignals = () => {
         </div>
       </div>
 
-      {/* Signals Feed */}
-      <div className="z-10 h-32">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-xs font-bold text-landing-text dark:text-white uppercase tracking-wider flex items-center gap-2">
-             <span className="material-symbols-outlined text-[16px]">psychology</span> AI Decisions
-          </h4>
-          <span className="text-[10px] text-landing-muted bg-landing-primary/5 px-2 py-1 rounded-md">{signals.length} Signals</span>
-        </div>
+    </div>
+  );
+};
 
-        <div className="space-y-2 h-24 overflow-y-auto pr-1 custom-scrollbar">
-          {signals.length === 0 ? (
-             <div className="text-center py-4 text-xs text-landing-muted italic">Waiting for AI optimization...</div>
-          ) : (
-            signals.map((s, i) => {
-              const action = actionMap[s.action] || { label: "UNK", class: "text-gray-400" };
-              return (
-                <div key={i} className="flex items-center justify-between p-2.5 bg-[#FDF9F9] dark:bg-[#161212] rounded-xl border border-landing-primary/5 hover:border-landing-primary/20 transition-all">
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono text-xs text-landing-muted">{new Date(s.createdAt).toLocaleTimeString()}</span>
-                    <span className="font-bold text-sm text-landing-text dark:text-white">{s.symbol || 'NIFTY'}</span>
-                  </div>
-                  <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${action.class}`}>
-                    {action.label}
-                  </span>
-                </div>
-              );
-            })
-          )}
+// --- AI DECISION FEED COMPONENT ---
+export const AIDecisionFeed = () => {
+  const signals = useSelector((state) => state.signals.signals);
+
+  return (
+    <div className="bg-white dark:bg-[#211A1A] rounded-3xl p-8 shadow-xl border border-landing-primary/10 flex flex-col relative overflow-hidden">
+      {/* Soft Glow Background */}
+      <div className="absolute -top-20 -right-20 w-80 h-80 bg-landing-primary/10 rounded-full blur-[80px] pointer-events-none"></div>
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6 z-10">
+        <div>
+          <h3 className="text-2xl font-display font-bold text-landing-text dark:text-white mb-1">AI Trading Decisions</h3>
+          <p className="text-xs text-landing-muted font-medium">Real-time ML optimization signals</p>
         </div>
+        <div className="bg-landing-primary/10 px-4 py-2 rounded-full">
+          <span className="text-sm font-bold text-landing-primary">{signals.length} Signals</span>
+        </div>
+      </div>
+
+      {/* Signals Feed */}
+      <div className="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+        {signals.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+            <span className="material-symbols-outlined text-5xl text-landing-muted/30 mb-3">psychology</span>
+            <p className="text-sm text-landing-muted font-medium">Waiting for AI optimization signals...</p>
+            <p className="text-xs text-landing-muted/60 mt-2">Live signals will appear here when the market generates trading opportunities</p>
+          </div>
+        ) : (
+          signals.map((s, i) => {
+            const action = actionMap[s.action] || { label: "UNK", class: "text-gray-400" };
+            return (
+              <div key={i} className="flex items-center justify-between p-4 bg-gradient-to-r from-landing-primary/5 to-transparent rounded-2xl border border-landing-primary/10 hover:border-landing-primary/30 hover:shadow-lg hover:shadow-landing-primary/10 transition-all duration-300">
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="flex flex-col">
+                    <span className="font-mono text-xs font-bold text-landing-primary">{new Date(s.createdAt).toLocaleTimeString()}</span>
+                    <span className="text-sm font-bold text-landing-text dark:text-white">{s.symbol || 'NIFTY 50'}</span>
+                  </div>
+                </div>
+                <span className={`text-xs font-bold px-4 py-2 rounded-full border ${action.class}`}>
+                  {action.label}
+                </span>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );
@@ -306,50 +369,67 @@ export const AISignals = () => {
 // --- QUICK TRADE WIDGET ---
 export const QuickTradeForm = ({ onSubmit, marketOpen }) => {
   const { register, handleSubmit, setValue } = useForm();
+  const dispatch = useDispatch();
+  const toast = useToast();
+
   const [side, setSide] = React.useState('BUY');
   const [computedPrice, setComputedPrice] = React.useState(null);
   const [priceSource, setPriceSource] = React.useState('awaiting');
   const [isLoading, setIsLoading] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Fetch LTP from smartapi_streamer every 1 second when market is open
   useEffect(() => {
     let priceInterval = null;
+    let mounted = true;
 
     const fetchLivePrice = async () => {
-      if (!marketOpen) {
-        setIsLoading(false);
-        return;
-      }
+      if (!marketOpen || !mounted) return;
       
       try {
-        setIsLoading(true);
         const { default: axiosInstance } = await import('../api/axiosInstance.js');
-        const response = await axiosInstance.get('/api/market/live-price?symbol=NIFTY', {
-          timeout: 5000,
+        const response = await axiosInstance.get('/market/live-price?symbol=NIFTY', {
+          timeout: 3000,
         });
         
-        if (response.data?.success && typeof response.data?.ltp === 'number') {
-          const ltp = Number(response.data.ltp);
+        console.log('[QuickTradeForm] Live price response:', response.data);
+        
+        if (mounted && response.data?.success && (typeof response.data?.ltp === 'number' || typeof response.data?.price === 'number')) {
+          const ltp = Number(response.data.ltp || response.data.price);
+          console.log('[QuickTradeForm] Setting price to:', ltp);
           setComputedPrice(ltp);
-          setPriceSource(`Live LTP (SmartAPI) H:${response.data.high?.toFixed(2)} L:${response.data.low?.toFixed(2)}`);
+          setPriceSource(`Live LTP H:${response.data.high?.toFixed(2)} L:${response.data.low?.toFixed(2)}`);
           setIsLoading(false);
         } else {
-          throw new Error('Invalid price data');
+          throw new Error(`Invalid price data: ltp=${response.data?.ltp}, price=${response.data?.price}`);
         }
       } catch (error) {
-        console.warn('Failed to fetch LTP:', error.message);
-        setPriceSource('Streamer offline - awaiting connection');
+        if (mounted) {
+          console.warn('[QuickTradeForm] Failed to fetch LTP:', error.message);
+          console.warn('[QuickTradeForm] Error response:', error.response?.data);
+          if (!computedPrice) {
+            setPriceSource('Awaiting live price data...');
+          }
+        }
       }
     };
     
     // Fetch immediately when market opens
     if (marketOpen) {
+      console.log('[QuickTradeForm] Market is open, starting price polling...');
       fetchLivePrice();
       // Poll every 1 second to get real-time LTP
-      priceInterval = setInterval(fetchLivePrice, 1000);
+      priceInterval = setInterval(() => {
+        if (mounted) fetchLivePrice();
+      }, 1000);
+    } else {
+      console.log('[QuickTradeForm] Market is closed, clearing prices...');
+      setComputedPrice(null);
+      setPriceSource('awaiting');
     }
     
     return () => {
+      mounted = false;
       if (priceInterval) {
         clearInterval(priceInterval);
       }
@@ -367,7 +447,7 @@ export const QuickTradeForm = ({ onSubmit, marketOpen }) => {
       try {
         setIsLoading(true);
         const { default: axiosInstance } = await import('../api/axiosInstance.js');
-        const response = await axiosInstance.get('/api/market/closing-price?symbol=NIFTY', {
+        const response = await axiosInstance.get('/market/closing-price?symbol=NIFTY', {
           timeout: 5000,
         });
         
@@ -400,14 +480,89 @@ export const QuickTradeForm = ({ onSubmit, marketOpen }) => {
     setValue('side', newSide);
   };
 
-  const submitForm = (form) => {
-    const payload = {
-      symbol: 'NIFTY',
-      quantity: Number(form.quantity),
-      price: computedPrice,
-      side,
-    };
-    onSubmit(payload);
+  const submitForm = async (form) => {
+    // Validation
+    if (!form.quantity || form.quantity <= 0) {
+      toast.error('Please enter a valid quantity');
+      return;
+    }
+
+    if (!computedPrice) {
+      toast.error('Price not available. Please try again.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    dispatch(createOrderStart());
+
+    try {
+      const { default: axiosInstance } = await import('../api/axiosInstance.js');
+      const payload = {
+        symbol: 'NIFTY',
+        quantity: Number(form.quantity),
+        price: computedPrice,
+        side,
+      };
+
+      console.log('[QuickTradeForm] Submitting order:', payload);
+
+      const response = await axiosInstance.post('/trading/orders', payload);
+
+      if (response.data?.success) {
+        const orderData = response.data.order;
+        dispatch(createOrderSuccess(orderData));
+
+        // Refresh portfolio data immediately
+        try {
+          const portfolioResponse = await axiosInstance.get('/trading/portfolio/summary');
+          if (portfolioResponse.data?.success) {
+            dispatch(updatePortfolioSuccess(portfolioResponse.data.summary || portfolioResponse.data));
+          }
+        } catch (err) {
+          console.warn('[QuickTradeForm] Failed to refresh portfolio:', err);
+        }
+
+        // Show success toast with order details
+        toast.success(
+          `${side} Order Placed Successfully!`,
+          3000,
+          {
+            orderId: orderData.orderId,
+            symbol: orderData.symbol,
+            quantity: orderData.quantity,
+            price: `₹${orderData.price}`,
+            brokerage: `₹${orderData.brokerage}`,
+          }
+        );
+
+        // Reset form
+        setValue('quantity', 1);
+        
+        // Call parent onSubmit if provided
+        if (onSubmit) {
+          onSubmit(response.data);
+        }
+
+      } else {
+        throw new Error(response.data?.message || 'Order placement failed');
+      }
+    } catch (error) {
+      console.error('[QuickTradeForm] Order submission error:', error);
+
+      const errorMessage = error.response?.data?.message || error.message || 'Order placement failed';
+      const errorData = error.response?.data?.data;
+
+      dispatch(createOrderFailure(errorMessage));
+
+      // Show error toast with details
+      toast.error(
+        errorMessage,
+        5000,
+        errorData || { error: error.message }
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -418,8 +573,8 @@ export const QuickTradeForm = ({ onSubmit, marketOpen }) => {
       <div className="flex items-center justify-between mb-8 relative z-10">
         <h3 className="font-display font-bold text-xl text-landing-text dark:text-white">Quick Trade</h3>
         <div className="flex bg-[#FDF9F9] dark:bg-[#161212] p-1 rounded-xl border border-landing-primary/10">
-          <button type="button" onClick={() => handleSideToggle('BUY')} className={`px-4 py-1.5 text-xs rounded-lg uppercase tracking-wide ${side === 'BUY' ? 'font-bold bg-white dark:bg-[#211A1A] shadow-sm text-landing-text dark:text-white border border-black/5 dark:border-white/5' : 'font-medium text-landing-muted hover:text-landing-text transition-colors'}`}>Buy</button>
-          <button type="button" onClick={() => handleSideToggle('SELL')} className={`px-4 py-1.5 text-xs rounded-lg uppercase tracking-wide ${side === 'SELL' ? 'font-bold bg-white dark:bg-[#211A1A] shadow-sm text-landing-text dark:text-white border border-black/5 dark:border-white/5' : 'font-medium text-landing-muted hover:text-landing-text transition-colors'}`}>Sell</button>
+          <button type="button" onClick={() => handleSideToggle('BUY')} className={`px-4 py-1.5 text-xs rounded-lg uppercase tracking-wide focus:outline-none focus:ring-0 ${side === 'BUY' ? 'font-bold bg-white dark:bg-[#211A1A] shadow-sm text-landing-text dark:text-white border border-landing-primary/10 dark:border-white/10' : 'font-medium text-landing-muted hover:text-landing-text transition-colors'}`}>Buy</button>
+          <button type="button" onClick={() => handleSideToggle('SELL')} className={`px-4 py-1.5 text-xs rounded-lg uppercase tracking-wide focus:outline-none focus:ring-0 ${side === 'SELL' ? 'font-bold bg-white dark:bg-[#211A1A] shadow-sm text-landing-text dark:text-white border border-landing-primary/10 dark:border-white/10' : 'font-medium text-landing-muted hover:text-landing-text transition-colors'}`}>Sell</button>
         </div>
       </div>
 
@@ -448,6 +603,7 @@ export const QuickTradeForm = ({ onSubmit, marketOpen }) => {
               defaultValue={1}
               min={1}
               step={1}
+              disabled={isSubmitting}
             />
           </div>
           <div className="flex-1">
@@ -474,14 +630,24 @@ export const QuickTradeForm = ({ onSubmit, marketOpen }) => {
         <div className="pt-2">
           <button 
             className={`w-full font-bold py-4 rounded-xl shadow-lg transition-all hover:-translate-y-0.5 active:translate-y-0 flex justify-center items-center gap-2 group tracking-wide text-sm ${
-              !computedPrice || isLoading
+              !computedPrice || isLoading || isSubmitting
                 ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
                 : 'bg-gradient-to-r from-landing-primary to-landing-primary-dark hover:from-landing-primary-dark hover:to-landing-primary text-white shadow-landing-primary/30'
-            }`}
-            disabled={!computedPrice || isLoading}
+            } focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-landing-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#211A1A]`}
+            disabled={!computedPrice || isLoading || isSubmitting}
+            type="submit"
           >
-            <span>{side === 'BUY' ? 'Place Buy Order' : 'Place Sell Order'} {computedPrice ? `@ ₹${computedPrice.toFixed(2)}` : ''}</span>
-            <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+            {isSubmitting ? (
+              <>
+                <span className="animate-spin">⟳</span>
+                Processing...
+              </>
+            ) : (
+              <>
+                <span>{side === 'BUY' ? 'Place Buy Order' : 'Place Sell Order'} {computedPrice ? `@ ₹${computedPrice.toFixed(2)}` : ''}</span>
+                <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+              </>
+            )}
           </button>
         </div>
       </form>

@@ -6,12 +6,17 @@ import Landing from './pages/Landing.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
 import Dashboard from './pages/Dashboard.jsx';
+import Portfolio from './pages/Portfolio.jsx';
+import Orders from './pages/Orders.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import { ToastProvider } from './contexts/ToastContext.jsx';
+import { ToastContainer } from './components/ToastContainer.jsx';
 import { loadUser, logout } from './redux/authSlice.js';
 
 const AppContent = () => {
   const dispatch = useDispatch();
-  const { isAuthenticated } = useSelector((state) => state.auth);
+  const { isAuthenticated, loading } = useSelector((state) => state.auth);
+  const [initializing, setInitializing] = React.useState(true);
 
   useEffect(() => {
     // Attempt to load user via httpOnly cookie on app start
@@ -27,11 +32,25 @@ const AppContent = () => {
       } catch (err) {
         console.error('Failed to load user:', err);
         dispatch(logout());
+      } finally {
+        setInitializing(false);
       }
     };
 
     loadUserData();
   }, [dispatch]);
+
+  // Show loading screen while checking auth
+  if (initializing) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#FDF9F9] dark:bg-[#1A1212]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-landing-primary mx-auto mb-4"></div>
+          <p className="text-landing-muted">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <BrowserRouter>
@@ -53,8 +72,25 @@ const AppContent = () => {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/portfolio" 
+          element={
+            <ProtectedRoute>
+              <Portfolio />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/orders" 
+          element={
+            <ProtectedRoute>
+              <Orders />
+            </ProtectedRoute>
+          } 
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <ToastContainer />
     </BrowserRouter>
   );
 };
@@ -62,7 +98,9 @@ const AppContent = () => {
 const App = () => {
   return (
     <Provider store={store}>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </Provider>
   );
 };

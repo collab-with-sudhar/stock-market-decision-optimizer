@@ -14,9 +14,11 @@ class Candle:
     low: float
     close: float
     volume: float = 0.0
+    ltp_snapshot: float = 0.0  # LTP at minute boundary (for model input)
 
     def to_close(self):
-        return float(self.close)
+        """Return LTP snapshot at minute boundary (not aggregated close)"""
+        return float(self.ltp_snapshot if self.ltp_snapshot > 0 else self.close)
 
 class TickToCandle:
     """
@@ -72,9 +74,13 @@ class TickToCandle:
             return None
         else:
             # minute changed: close previous candle, push to history
+            # IMPORTANT: The 'close' field is the last tick's price from previous minute
+            # But for model input, we want LTP at minute boundary (first tick of new minute)
             closed = cur
+            closed.ltp_snapshot = price  # This tick's price = LTP at minute boundary
+            
             # Create new current candle for this tick's minute
-            new_c = Candle(ts=candle_start, open=price, high=price, low=price, close=price, volume=1.0)
+            new_c = Candle(ts=candle_start, open=price, high=price, low=price, close=price, volume=1.0, ltp_snapshot=0.0)
             self.current[symbol] = new_c
             # push closed into history
             h = self.history[symbol]

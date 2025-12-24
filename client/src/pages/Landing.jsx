@@ -72,28 +72,7 @@ const Landing = () => {
             </div>
 
             {/* Social Proof / Stats - Centered */}
-            <div className="flex items-center justify-center gap-6 pt-8 border-t border-landing-primary/10 mt-4 delay-500 animate-fade-in-up">
-              <div className="flex -space-x-4">
-                {/* Placeholders for user avatars */}
-                <div className="w-12 h-12 rounded-full border-[3px] border-[#FDF9F9] dark:border-[#161212] bg-gray-200 flex items-center justify-center text-xs overflow-hidden">
-                   <img src="https://i.pravatar.cc/100?img=1" alt="User" className="w-full h-full object-cover"/>
-                </div>
-                <div className="w-12 h-12 rounded-full border-[3px] border-[#FDF9F9] dark:border-[#161212] bg-gray-300 flex items-center justify-center text-xs overflow-hidden">
-                    <img src="https://i.pravatar.cc/100?img=2" alt="User" className="w-full h-full object-cover"/>
-                </div>
-                <div className="w-12 h-12 rounded-full border-[3px] border-[#FDF9F9] dark:border-[#161212] bg-landing-text text-white flex items-center justify-center text-xs font-bold shadow-md">
-                  1k+
-                </div>
-              </div>
-              <div className="flex flex-col items-start">
-                <div className="flex gap-0.5 text-landing-primary text-sm">
-                  {[1,2,3,4,5].map((star) => (
-                    <span key={star} className="material-symbols-outlined text-[18px] icon-filled">star</span>
-                  ))}
-                </div>
-                <span className="text-sm text-landing-muted">Learners trusting our AI signals</span>
-              </div>
-            </div>
+            
 
           </div>
         </main>

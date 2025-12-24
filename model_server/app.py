@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import time
+import numpy as np  # Added for normalization
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
@@ -101,16 +102,35 @@ def get_configured_agent(settings: Settings = Depends(get_settings)):
 def closes_to_obs(closes: List[float], position: int, expected_len: Optional[int]) -> List[float]:
     if expected_len is None or expected_len < 2:
         raise HTTPException(status_code=400, detail="Model expected_obs_len not configured correctly")
+    
     returns_needed = expected_len - 1
     if len(closes) < returns_needed + 1:
         raise HTTPException(status_code=400, detail=f"Need {returns_needed+1} closes, got {len(closes)}")
+    
+    # Get the exact window of closes needed to compute N returns
     closes_slice = closes[-(returns_needed + 1):]
     rets: List[float] = []
+    
+    # Compute raw returns
     for prev, curr in zip(closes_slice, closes_slice[1:]):
         if prev == 0:
             raise HTTPException(status_code=400, detail="Zero close encountered when computing returns")
         rets.append((curr - prev) / prev)
-    obs = rets[-returns_needed:]
+    
+    # --- Normalization Logic (Matches src/envs/trading_env_improved.py) ---
+    # The training environment normalizes returns by dividing by their standard deviation.
+    # Without this, raw returns (e.g., 0.001) look like 0.0 to a network expecting values around ~1.0.
+    
+    rets_arr = np.array(rets[-returns_needed:], dtype=np.float32)
+    std = rets_arr.std()
+    
+    # If std > 0, divide by it; otherwise use 1.0 (flat line case)
+    if std > 1e-9:
+        rets_arr = rets_arr / std
+    
+    obs = rets_arr.tolist()
+    # ----------------------------------------------------------------------
+
     obs.append(float(position))
     return obs
 
@@ -200,30 +220,32 @@ def predict_from_closes(
     agent=Depends(get_configured_agent),
 ):
     try:
+        # This now includes the normalization logic
         obs = closes_to_obs(req.closes, req.position, settings.expected_obs_len)
-        # Debug: log observation stats to diagnose persistent HOLD
+        
+        # Debug: log observation stats to diagnose decisions
         try:
             closes = req.closes[-(settings.expected_obs_len or 21):]
             if closes:
-                uniq = len(set([round(float(x), 4) for x in closes]))
                 # compute returns stats from obs (first 20 values)
                 rets = obs[:-1]
                 if rets:
                     mean = sum(rets)/len(rets)
                     var = sum((r-mean)**2 for r in rets)/len(rets)
                     std = var ** 0.5
-                    zeros = sum(1 for r in rets if abs(r) < 1e-9)
-                    print(f"[OBS_STATS] closes_n={len(closes)} uniq={uniq} mean={mean:.3e} std={std:.3e} zeros={zeros}/{len(rets)} pos={obs[-1]}")
-                    if std < 1e-6:
-                        print("[OBS_STATS] Returns nearly flat; model may prefer HOLD")
+                    print(f"[OBS_STATS] Normalized Inputs -> mean={mean:.3f} std={std:.3f} pos={obs[-1]}")
         except Exception as _:
             pass
+
         start = time.perf_counter()
         action = agent.decide(obs)
+        
         if action not in (0, 1, 2):
             raise HTTPException(status_code=500, detail=f"Model returned invalid action: {action}")
+        
         latency_ms = (time.perf_counter() - start) * 1000.0
         print(f"[predict_from_closes] action={action} obs_len={len(obs)} latency_ms={latency_ms:.3f}")
+        
         return PredictResponse(action=action, latency_ms=latency_ms)
     except HTTPException:
         raise

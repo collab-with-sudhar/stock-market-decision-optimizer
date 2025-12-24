@@ -130,20 +130,20 @@ export const getClosingPrice = catchAsyncErrors(async (req, res, next) => {
 // @route   GET /api/market/status
 // @access  Public
 export const getMarketStatus = catchAsyncErrors(async (req, res, next) => {
-  // Get current time in IST (UTC+5:30)
+  // Get current time in IST (UTC+5:30) using toLocaleString
   const now = new Date();
-  const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
-  const istTime = new Date(now.getTime() + istOffset);
+  const istTimeString = now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+  const istTime = new Date(istTimeString);
   
-  const day = istTime.getUTCDay(); // 0=Sun, 6=Sat
-  const hours = istTime.getUTCHours();
-  const minutes = istTime.getUTCMinutes();
+  const day = istTime.getDay(); // 0=Sun, 6=Sat
+  const hours = istTime.getHours();
+  const minutes = istTime.getMinutes();
   const totalMinutes = hours * 60 + minutes;
 
   // NSE trading hours: 9:15 AM to 3:30 PM IST (Mon-Fri)
   const isWeekday = day >= 1 && day <= 5;
-  const openMinutes = 9 * 60 + 15; // 9:15 AM
-  const closeMinutes = 15 * 60 + 30; // 3:30 PM
+  const openMinutes = 9 * 60 + 15; // 9:15 AM = 555 minutes
+  const closeMinutes = 15 * 60 + 30; // 3:30 PM = 930 minutes
   const isWithinTradingHours = totalMinutes >= openMinutes && totalMinutes <= closeMinutes;
 
   const isOpen = isWeekday && isWithinTradingHours;
@@ -153,6 +153,9 @@ export const getMarketStatus = catchAsyncErrors(async (req, res, next) => {
     marketOpen: isOpen,
     currentTime: now.toISOString(),
     istTime: istTime.toISOString(),
+    istHours: hours,
+    istMinutes: minutes,
+    totalMinutes,
     message: isOpen ? "Market is open" : "Market is closed",
   });
 });

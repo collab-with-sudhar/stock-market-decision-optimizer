@@ -6,6 +6,8 @@ import {
   getPositions,
   getPortfolio,
   resetAccount,
+  getPortfolioSummary,
+  getTradeHistory
 } from "../controllers/tradingController.js";
 import { isAuthenticatedUser } from "../middlewares/auth.js";
 
@@ -24,5 +26,9 @@ router.get("/positions", isAuthenticatedUser, getPositions);
 
 // Portfolio routes
 router.get("/portfolio", isAuthenticatedUser, getPortfolio);
+router.get("/portfolio/summary", isAuthenticatedUser, getPortfolioSummary);
+
+// Trade history routes
+router.get("/trades", isAuthenticatedUser, getTradeHistory);
 
 export default router;

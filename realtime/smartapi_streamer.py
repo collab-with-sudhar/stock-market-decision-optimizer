@@ -18,8 +18,9 @@ Real-time price streamer using SmartAPI WebSocket 2.0
 Backend then:
   -> calls FastAPI /predict_from_closes
   -> runs PPO model
-  -> risk checks
-  -> logs + dry-run order
+  -> generates trading signal (BUY/SELL/HOLD)
+  -> emits signal to frontend via WebSocket
+  -> users manually place orders based on signals
 
 Run this in a separate terminal:
 
@@ -204,16 +205,41 @@ def run_stream():
                 "todate": end.strftime("%Y-%m-%d %H:%M"),
             }
             
+            logger.info("[WARM_START] API params: %s", params)
             resp = smart.getCandleData(params)
-            if not resp or not resp.get("status"):
-                logger.warning("[WARM_START] ❌ Historical fetch failed for %s: %s", symbol, resp)
+            
+            # Log full response for debugging
+            logger.info("[WARM_START] API Response status: %s", resp.get("status") if resp else "No response")
+            logger.info("[WARM_START] API Response message: %s", resp.get("message") if resp else "N/A")
+            
+            if not resp:
+                logger.warning("[WARM_START] ❌ No response from getCandleData for %s", symbol)
+                logger.info("[WARM_START] Will fall back to left-padding strategy")
+                return
+                
+            if not resp.get("status"):
+                logger.warning("[WARM_START] ❌ Historical fetch failed for %s", symbol)
+                logger.warning("[WARM_START] Full API Response: %s", resp)
                 logger.info("[WARM_START] Will fall back to left-padding strategy")
                 return
                 
             series = resp.get("data") or []
-            logger.info("[WARM_START] Received %d raw candles for %s", len(series), symbol)
+            logger.info("[WARM_START] ✅ Received %d raw candles from SmartAPI for %s", len(series), symbol)
+            
+            # Log sample of raw data to verify it's real
+            if series and len(series) > 0:
+                logger.info("[WARM_START] First candle sample: %s", series[0])
+                logger.info("[WARM_START] Last candle sample: %s", series[-1])
+            else:
+                logger.warning("[WARM_START] ⚠️ Empty data array - possible causes:")
+                logger.warning("[WARM_START]   1. Market is closed or outside trading hours")
+                logger.warning("[WARM_START]   2. Symbol token '%s' may be incorrect", token)
+                logger.warning("[WARM_START]   3. Time range has no data available")
+                logger.warning("[WARM_START]   4. Symbol may require different exchange type")
             
             # Expected format per entry: ["YYYY-MM-DD HH:MM", open, high, low, close, volume]
+            # IMPORTANT: For model input, use 'close' as LTP snapshot (end of that minute)
+            # This matches training data where 'Close' = end-of-period price
             candles: List[Candle] = []
             for row in series:
                 try:
@@ -226,7 +252,8 @@ def run_stream():
                         o, h, l, c = o/100.0, h/100.0, l/100.0, c/100.0
                     
                     ts_ms = _parse_candle_ts(ts_str)
-                    candles.append(Candle(ts=ts_ms, open=o, high=h, low=l, close=c, volume=0.0))
+                    # Use close as ltp_snapshot since it represents LTP at end of that minute
+                    candles.append(Candle(ts=ts_ms, open=o, high=h, low=l, close=c, volume=0.0, ltp_snapshot=c))
                 except Exception as e:
                     logger.debug("[WARM_START] Failed to parse candle row %s: %s", row, e)
                     continue
@@ -265,6 +292,16 @@ def run_stream():
                 logger.info(
                     "[WARM_START] Close price range: ₹%.2f - ₹%.2f (avg: ₹%.2f)",
                     min(closes_list), max(closes_list), sum(closes_list)/len(closes_list)
+                )
+                
+                # Verify data is real by checking price variation
+                price_variation = max(closes_list) - min(closes_list)
+                price_variation_pct = (price_variation / min(closes_list) * 100) if min(closes_list) > 0 else 0
+                logger.info(
+                    "[WARM_START] Price variation: ₹%.2f (%.2f%%) - %s",
+                    price_variation,
+                    price_variation_pct,
+                    "✅ Real market data" if price_variation_pct > 0.01 else "⚠️ Flat/Mock data"
                 )
                 logger.info("[WARM_START] Ready for immediate prediction (no startup delay)")
             else:
@@ -362,11 +399,14 @@ def run_stream():
             if closed is not None:
                 # SPEC: A 1-minute candle has completed
                 sym, candle = closed
-                logger.info("[CANDLE_CLOSE] %s | close=%.2f", sym, candle.close)
+                ltp_at_boundary = candle.ltp_snapshot if candle.ltp_snapshot > 0 else candle.close
+                logger.info("[CANDLE_CLOSE] %s | LTP_snapshot=%.2f (candle_close=%.2f)", 
+                           sym, ltp_at_boundary, candle.close)
 
-                # SPEC COMPLIANCE: Send exactly 21 completed 1-minute candle closes
-                # Get completed candles from aggregator history
-                candle_closes = agg.get_closes(sym)
+                # SPEC COMPLIANCE: Send exactly 21 LTP snapshots (at minute boundaries)
+                # This matches training data where we use Close prices (end-of-period LTP)
+                # Get LTP snapshots from aggregator history
+                candle_closes = agg.get_closes(sym)  # Returns ltp_snapshot values
                 
                 if len(candle_closes) >= 21:
                     # We have 21+ candles, use the last 21

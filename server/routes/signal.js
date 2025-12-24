@@ -1,13 +1,9 @@
-// server/routes/signal.js (only this file; other imports unchanged)
+// server/routes/signal.js
 import express from 'express';
 
 import {
   EXPECTED_OBS_LEN,
-  ACCOUNT_SIZE,
   DEFAULT_ORDER_VALUE,
-  MAX_POSITION_PCT,
-  MIN_TIME_BETWEEN_TRADES_SECS,
-  MAX_TRADES_PER_DAY,
 } from '../config.js';
 
 import {
@@ -15,11 +11,7 @@ import {
   predictFromCloses as modelPredictFromCloses,
 } from '../services/modelClient.js';
 
-import { placeOrder } from '../services/executionAdapter.js';
-
 import Decision from '../models/Decision.js';
-import Order from '../models/Order.js';
-import Position from '../models/Position.js';
 
 const router = express.Router();
 
@@ -33,27 +25,7 @@ function computeQuantity(price) {
   return Math.max(qty, 1);
 }
 
-async function checkMinTime(symbol) {
-   return true;
-  
-}
-
-async function checkMaxTradesPerDay() {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const count = await Decision.countDocuments({ createdAt: { $gte: start } }).exec();
-  return count < MAX_TRADES_PER_DAY;
-}
-
-async function checkMaxPosition(symbol, price, additionalQty = 0) {
-  const pos = await Position.findOne({ symbol }).exec();
-  const currentQty = pos ? pos.qty : 0;
-  const newQty = Math.abs(currentQty + additionalQty);
-  const newPositionValue = newQty * price;
-  return newPositionValue <= MAX_POSITION_PCT * ACCOUNT_SIZE;
-}
-
-// server/routes/signal.js  (only the router.post part changed)
+// server/routes/signal.js - Signal generation endpoint (no automatic order placement)
 router.post('/signal', async (req, res) => {
   const logger = req.app.locals.logger;
   const io = req.app.locals.io;
@@ -107,19 +79,14 @@ router.post('/signal', async (req, res) => {
     let inputForStorage;
     let inputType;
 
-    // --- 1) Determine position flag from DB (real position state) ---
-    // position_flag = 0 (flat) or 1 (long). For now we ignore shorts.
-    let positionFlag = 0;
-    const currentPos = await Position.findOne({ symbol }).exec();
-    if (currentPos && currentPos.qty > 0) {
-      positionFlag = 1;
-    } else {
-      positionFlag = 0;
-    }
+    // --- 1) Position flag is always 0 for signal generation ---
+    // Since this is a system-wide signal (not user-specific), we start from flat position
+    // Users track their own positions in their accounts
+    const positionFlag = 0;
 
     // --- 2) Prefer closes-based input if provided ---
     if (Array.isArray(closes) && closes.length >= 2) {
-      // use /predict_from_closes with computed positionFlag
+      // use /predict_from_closes with positionFlag=0
       modelResp = await modelPredictFromCloses(closes, positionFlag);
       inputForStorage = closes;
       inputType = 'closes';
@@ -140,6 +107,11 @@ router.post('/signal', async (req, res) => {
     // Debug: log the chosen action for traceability
     logger.info(`[Signal][ACTION] ${symbol} → action=${action} (0=HOLD,1=BUY,2=SELL)`);
 
+    // Map action to readable signal
+    const signal = action === 0 ? 'HOLD' : action === 1 ? 'BUY' : 'SELL';
+    const priceVal = Number(price) || 1.0;
+    const qty = computeQuantity(priceVal);
+
     const decisionDoc = await Decision.create({
       symbol,
       obs: inputForStorage, // store what we used as input
@@ -148,97 +120,40 @@ router.post('/signal', async (req, res) => {
         modelLatencyMs: modelResp.latency_ms,
         inputType,
         positionFlag,
+        signal,
+        price: priceVal,
+        suggestedQuantity: qty,
         createdAt: nowISO(),
       },
     });
 
+    // Emit decision/signal to frontend for user to act upon
     io.emit('decision', {
       id: decisionDoc._id,
       symbol,
       action,
+      signal,
+      price: priceVal,
+      suggestedQuantity: qty,
+      positionFlag,
       createdAt: decisionDoc.createdAt,
     });
     
-    logger.info(`[Signal] Decision emitted via socket: ${symbol} action=${action}`);
+    logger.info(`[Signal] Decision emitted via socket: ${symbol} signal=${signal} (action=${action})`);
 
-    // --- 3) Risk checks as before ---
-    // if (!(await checkMaxTradesPerDay())) {
-    //   logger.info('Max trades per day exceeded');
-    //   return res
-    //     .status(403)
-    //     .json({ error: 'Max trades per day limit reached', decisionId: decisionDoc._id });
-    // }
-
-    if (!(await checkMinTime(symbol))) {
-      logger.info(`Min time between trades violated for ${symbol}`);
-      return res
-        .status(403)
-        .json({ error: 'Too soon to trade the same symbol', decisionId: decisionDoc._id });
-    }
-
-    if (action === 0) {
-      return res.json({ result: 'HOLD', decisionId: decisionDoc._id });
-    }
-
-    const side = action === 1 ? 'BUY' : 'SELL';
-    const priceVal = Number(price) || 1.0;
-    const qty = computeQuantity(priceVal);
-
-    // if (!(await checkMaxPosition(symbol, priceVal, side === 'BUY' ? qty : -qty))) {
-    //   logger.info(`Max position check failed for ${symbol}`);
-    //   return res
-    //     .status(403)
-    //     .json({ error: 'Max position limit would be exceeded', decisionId: decisionDoc._id });
-    // }
-
-    const orderResult = await placeOrder({
-      symbol,
-      side,
-      quantity: qty,
-      price: priceVal,
-      meta: { dryRun },
-    });
-
-    const orderDoc = await Order.create({
-      orderId: orderResult.orderId,
-      symbol,
-      side,
-      quantity: qty,
-      price: priceVal,
-      status: orderResult.status,
-      decisionRef: decisionDoc._id,
-      raw: orderResult.raw,
-      createdAt: orderResult.placedAt,
-      filledAt: orderResult.filledAt,
-    });
-
-    // --- 4) Update position based on the order (as before) ---
-    let pos = await Position.findOne({ symbol }).exec();
-    if (!pos) {
-      pos = await Position.create({
-        symbol,
-        qty: side === 'BUY' ? qty : -qty,
-        avgPrice: priceVal,
-        updatedAt: new Date(),
-      });
-    } else {
-      const newQty = pos.qty + (side === 'BUY' ? qty : -qty);
-      let newAvg = pos.avgPrice;
-      if (side === 'BUY' && newQty !== 0) {
-        newAvg = ((pos.qty * pos.avgPrice) + (qty * priceVal)) / (pos.qty + qty);
-      }
-      pos.qty = newQty;
-      pos.avgPrice = newAvg;
-      pos.updatedAt = new Date();
-      await pos.save();
-    }
-
-    io.emit('order', { order: orderDoc });
-
+    // Return the trading signal - no automatic order placement
     return res.json({
-      result: 'ORDER_PLACED',
-      order: orderDoc,
-      decisionId: decisionDoc._id,
+      result: 'SIGNAL_GENERATED',
+      signal: {
+        id: decisionDoc._id,
+        symbol,
+        action,
+        signal,
+        price: priceVal,
+        suggestedQuantity: qty,
+        positionFlag,
+        createdAt: decisionDoc.createdAt,
+      },
     });
   } catch (err) {
     console.error(err);

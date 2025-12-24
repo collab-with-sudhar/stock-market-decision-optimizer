@@ -17,11 +17,17 @@ BACKEND_SIGNAL_URL = "http://127.0.0.1:4000/api/signal"
 WINDOW_SIZE = 20  # must match your env.window_size (obs_len = window_size + 1)
 
 # ---- Symbols to track ----
-# You MUST fill the correct symbol tokens as per Angel's symbol master
-# Example below is just illustrative; replace with real tokens from Angel.
+# Symbol tokens from Angel One / SmartAPI
+# Find tokens from: https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json
+# IMPORTANT: Use the correct token for your symbol and exchange
 SYMBOL_TOKEN_MAP = {
     # "symbol": (exchangeType, token)
-    "NIFTY": (1, "26000")      # example token, replace
-      # example token, replace
-    # add more symbols here...
+    # exchangeType: 1=NSE, 2=NFO, 3=BSE
+    
+    "NIFTY": (1, "99926000"),      # NIFTY 50 Index (NSE) - Official token
+    # "BANKNIFTY": (1, "99926009"), # NIFTY Bank Index (NSE)
+    # "SENSEX": (3, "99919000"),    # BSE Sensex (BSE)
+    
+    # Add more symbols here...
+    # For stocks, use their specific tokens from the OpenAPI ScripMaster
 }
