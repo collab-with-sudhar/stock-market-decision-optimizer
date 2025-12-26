@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:4000/api",
+  baseURL: "https://hawaiian-stones-jersey-cookbook.trycloudflare.com/api",
   timeout: 5000,
 });
 

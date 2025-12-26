@@ -14,7 +14,7 @@ export const useWebSocket = () => {
     console.log('[useWebSocket] Initializing global WebSocket connection...');
 
     
-    const socket = io('http://localhost:4000', {
+    const socket = io('https://hawaiian-stones-jersey-cookbook.trycloudflare.com', {
       transports: ['websocket'],
       reconnection: true,
       reconnectionDelay: 1000,
