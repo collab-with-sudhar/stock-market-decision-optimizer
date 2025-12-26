@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://hawaiian-stones-jersey-cookbook.trycloudflare.com/api",
+  baseURL: "https://meetup-print-jpg-exist.trycloudflare.com/api",
   timeout: 5000,
 });
 
