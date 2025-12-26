@@ -1,4 +1,4 @@
-// server/services/modelClient.js
+
 import axios from 'axios';
 import { MODEL_SERVER_URL } from '../config.js';
 
@@ -7,11 +7,11 @@ const client = axios.create({
   timeout: 3000,
 });
 
-// call model-server /predict
+
 export async function predict(obs) {
   try {
     const res = await client.post('/predict', { obs });
-    return res.data; // { action, latency_ms }
+    return res.data; 
   } catch (err) {
     const resp = err.response;
     const msg = resp
@@ -23,7 +23,7 @@ export async function predict(obs) {
 export async function predictFromCloses(closes, position = 0) {
   try {
     const res = await client.post('/predict_from_closes', { closes, position });
-    return res.data; // { action, latency_ms }
+    return res.data; 
   } catch (err) {
     const resp = err.response;
     const msg = resp

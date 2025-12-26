@@ -11,42 +11,48 @@ export const chartSlice = createSlice({
   initialState,
   reducers: {
     addTick: (state, action) => {
-      const { price, ts } = action.payload;
-      const CANDLE_MS = 60000; // 1 minute
-      
-      const bucket = Math.floor(ts / CANDLE_MS) * CANDLE_MS;
-      state.currentPrice = price;
-      state.lastUpdated = new Date().toISOString();
-      
-      const lastCandle = state.candles[state.candles.length - 1];
-      
-      if (!lastCandle || lastCandle.bucket !== bucket) {
-        // New candle
-        const newCandle = {
-          bucket,
-          label: new Date(bucket).toLocaleTimeString('en-IN', { 
-            hour12: false, 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          }),
-          open: price,
-          high: price,
-          low: price,
-          close: price,
-          volume: 1,
-        };
-        state.candles.push(newCandle);
-      } else {
-        // Update existing candle
-        lastCandle.high = Math.max(lastCandle.high, price);
-        lastCandle.low = Math.min(lastCandle.low, price);
-        lastCandle.close = price;
-        lastCandle.volume = (lastCandle.volume || 0) + 1;
-      }
-      
-      // Keep last 60 minutes
-      if (state.candles.length > 60) {
-        state.candles = state.candles.slice(-60);
+      try {
+        const { price, ts } = action.payload;
+        const CANDLE_MS = 60000; 
+        
+        const bucket = Math.floor(ts / CANDLE_MS) * CANDLE_MS;
+        state.currentPrice = price;
+        state.lastUpdated = new Date().toISOString();
+        
+        const lastCandle = state.candles[state.candles.length - 1];
+        
+        if (!lastCandle || lastCandle.bucket !== bucket) {
+          
+          const newCandle = {
+            bucket,
+            label: new Date(bucket).toLocaleTimeString('en-IN', { 
+              hour12: false, 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            }),
+            open: price,
+            high: price,
+            low: price,
+            close: price,
+            volume: 1,
+          };
+          state.candles.push(newCandle);
+          console.log('[ChartSlice] New candle created:', newCandle);
+        } else {
+          
+          lastCandle.high = Math.max(lastCandle.high, price);
+          lastCandle.low = Math.min(lastCandle.low, price);
+          lastCandle.close = price;
+          lastCandle.volume = (lastCandle.volume || 0) + 1;
+          console.log('[ChartSlice] Candle updated:', lastCandle);
+        }
+        
+        
+        if (state.candles.length > 60) {
+          state.candles = state.candles.slice(-60);
+        }
+      } catch (error) {
+        console.error('[ChartSlice] Error in addTick:', error);
       }
     },
     
@@ -62,7 +68,7 @@ export const chartSlice = createSlice({
     },
 
     prependCandles: (state, action) => {
-      // Add candles to the beginning (for loading historical data)
+      
       state.candles = [...action.payload, ...state.candles];
       if (state.candles.length > 60) {
         state.candles = state.candles.slice(-60);

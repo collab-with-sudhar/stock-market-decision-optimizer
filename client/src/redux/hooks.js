@@ -2,9 +2,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { clearCandles, addTick, setCandles } from './chartSlice';
 import { clearSignals, addSignal } from './signalsSlice';
 
-/**
- * Custom hook for Redux state management and common operations
- */
+
 export const useAppState = () => {
   const dispatch = useDispatch();
   
@@ -17,26 +15,26 @@ export const useAppState = () => {
   const signalsLastUpdated = useSelector((state) => state.signals.lastUpdated);
 
   return {
-    // Chart data
+    
     candles,
     currentPrice,
     chartLastUpdated,
     
-    // Signals data
+    
     signals,
     totalSignals,
     signalsLastUpdated,
     
-    // Chart actions
+    
     addTick: (payload) => dispatch(addTick(payload)),
     setCandles: (payload) => dispatch(setCandles(payload)),
     clearChartData: () => dispatch(clearCandles()),
     
-    // Signal actions
+    
     addSignal: (payload) => dispatch(addSignal(payload)),
     clearSignalData: () => dispatch(clearSignals()),
     
-    // Combined actions
+    
     clearAllData: () => {
       dispatch(clearCandles());
       dispatch(clearSignals());
@@ -45,9 +43,7 @@ export const useAppState = () => {
   };
 };
 
-/**
- * Get storage usage info
- */
+
 export const getStorageInfo = () => {
   try {
     const stored = localStorage.getItem('reduxState');

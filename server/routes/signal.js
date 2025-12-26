@@ -1,4 +1,4 @@
-// server/routes/signal.js
+
 import express from 'express';
 
 import {
@@ -25,7 +25,7 @@ function computeQuantity(price) {
   return Math.max(qty, 1);
 }
 
-// server/routes/signal.js - Signal generation endpoint (no automatic order placement)
+
 router.post('/signal', async (req, res) => {
   const logger = req.app.locals.logger;
   const io = req.app.locals.io;
@@ -34,13 +34,13 @@ router.post('/signal', async (req, res) => {
     const {
       obs,
       closes,
-      // position = 0,  // <-- no longer taken from body
+      
       symbol = 'UNKNOWN',
       price = null,
       dryRun = true,
     } = req.body;
 
-    // Debug: basic input sanity and stats
+    
     try {
       if (Array.isArray(closes)) {
         const n = closes.length;
@@ -79,19 +79,19 @@ router.post('/signal', async (req, res) => {
     let inputForStorage;
     let inputType;
 
-    // --- 1) Position flag is always 0 for signal generation ---
-    // Since this is a system-wide signal (not user-specific), we start from flat position
-    // Users track their own positions in their accounts
+    
+    
+    
     const positionFlag = 0;
 
-    // --- 2) Prefer closes-based input if provided ---
+    
     if (Array.isArray(closes) && closes.length >= 2) {
-      // use /predict_from_closes with positionFlag=0
+      
       modelResp = await modelPredictFromCloses(closes, positionFlag);
       inputForStorage = closes;
       inputType = 'closes';
     } else if (Array.isArray(obs) && obs.length === EXPECTED_OBS_LEN) {
-      // Fallback to raw-obs mode (old behavior)
+      
       modelResp = await modelPredict(obs);
       inputForStorage = obs;
       inputType = 'obs';
@@ -104,17 +104,17 @@ router.post('/signal', async (req, res) => {
 
     const action = modelResp.action;
 
-    // Debug: log the chosen action for traceability
+    
     logger.info(`[Signal][ACTION] ${symbol} → action=${action} (0=HOLD,1=BUY,2=SELL)`);
 
-    // Map action to readable signal
+    
     const signal = action === 0 ? 'HOLD' : action === 1 ? 'BUY' : 'SELL';
     const priceVal = Number(price) || 1.0;
     const qty = computeQuantity(priceVal);
 
     const decisionDoc = await Decision.create({
       symbol,
-      obs: inputForStorage, // store what we used as input
+      obs: inputForStorage, 
       action,
       meta: {
         modelLatencyMs: modelResp.latency_ms,
@@ -127,21 +127,24 @@ router.post('/signal', async (req, res) => {
       },
     });
 
-    // Emit decision/signal to frontend for user to act upon
-    io.emit('decision', {
-      id: decisionDoc._id,
-      symbol,
-      action,
-      signal,
-      price: priceVal,
-      suggestedQuantity: qty,
-      positionFlag,
-      createdAt: decisionDoc.createdAt,
-    });
     
-    logger.info(`[Signal] Decision emitted via socket: ${symbol} signal=${signal} (action=${action})`);
+    if (io) {
+      io.emit('decision', {
+        id: decisionDoc._id,
+        symbol,
+        action,
+        signal,
+        price: priceVal,
+        suggestedQuantity: qty,
+        positionFlag,
+        createdAt: decisionDoc.createdAt,
+      });
+      logger.info(`[Signal] Decision emitted via socket: ${symbol} signal=${signal} (action=${action}) to ${io.engine.clientsCount} clients`);
+    } else {
+      logger.warn('[Signal] WebSocket IO not available - decision not broadcast');
+    }
 
-    // Return the trading signal - no automatic order placement
+    
     return res.json({
       result: 'SIGNAL_GENERATED',
       signal: {

@@ -12,11 +12,11 @@ const UserMenu = () => {
 
   const handleLogout = async () => {
     try {
-      // Optional: call backend logout if available
+      
       try {
         const { default: axiosInstance } = await import('../api/axiosInstance.js');
-        await axiosInstance.post('/auth/logout');
-      } catch (_) {}
+        await axiosInstance.get('/auth/logout');
+      } catch (_) { }
       dispatch(logout());
       navigate('/');
     } finally {
@@ -52,11 +52,10 @@ const UserMenu = () => {
         {initial}
       </button>
 
-      <div className={`absolute right-0 mt-2 w-48 rounded-xl border border-landing-primary/10 bg-white dark:bg-[#211A1A] shadow-xl shadow-landing-primary/20 z-50 overflow-hidden transition-all duration-300 origin-top-right ${
-        open 
-          ? 'opacity-100 scale-100 visible' 
+      <div className={`absolute right-0 mt-2 w-48 rounded-xl border border-landing-primary/10 bg-white dark:bg-[#211A1A] shadow-xl shadow-landing-primary/20 z-50 overflow-hidden transition-all duration-300 origin-top-right ${open
+          ? 'opacity-100 scale-100 visible'
           : 'opacity-0 scale-95 invisible'
-      }`}>
+        }`}>
         <div className="py-1">
           <button
             onClick={handleHome}

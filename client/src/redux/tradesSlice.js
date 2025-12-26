@@ -12,7 +12,7 @@ const tradesSlice = createSlice({
   name: 'trades',
   initialState,
   reducers: {
-    // Fetch trades
+    
     fetchTradesStart: (state) => {
       state.loading = true;
       state.error = null;
@@ -28,7 +28,7 @@ const tradesSlice = createSlice({
       state.error = action.payload;
     },
 
-    // Clear error
+    
     clearError: (state) => {
       state.error = null;
     },

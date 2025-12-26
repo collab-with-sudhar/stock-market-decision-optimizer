@@ -29,23 +29,23 @@ const Dashboard = () => {
   const fetchUserData = async () => {
     try {
       setLoading(true);
+
       
-      // Dynamically import to avoid initialization errors
       const { default: axiosInstance } = await import('../api/axiosInstance.js');
+
       
-      // Fetch positions
       const positionsRes = await axiosInstance.get('/trading/positions');
       if (positionsRes.data.success) {
         setPositions(positionsRes.data.positions);
       }
 
-      // Fetch orders
+      
       const ordersRes = await axiosInstance.get('/trading/orders?limit=20');
       if (ordersRes.data.success) {
         setOrders(ordersRes.data.orders);
       }
 
-      // Fetch portfolio stats
+      
       const portfolioRes = await axiosInstance.get('/trading/portfolio');
       if (portfolioRes.data.success) {
         setPortfolio(portfolioRes.data.portfolio);
@@ -61,24 +61,24 @@ const Dashboard = () => {
     try {
       const { default: axiosInstance } = await import('../api/axiosInstance.js');
       const response = await axiosInstance.post('/trading/orders', data);
-      
+
       if (response.data.success) {
-        // Refresh data after successful trade
+        
         fetchUserData();
       }
     } catch (error) {
       console.error('Error submitting trade:', error);
-      // Error handling is done by toast in QuickTradeForm
+      
     }
   };
 
   useEffect(() => {
     fetchUserData();
     fetchMarketStatus();
+
     
-    // Poll market status every 5 seconds for real-time updates
     const statusInterval = setInterval(fetchMarketStatus, 5000);
-    
+
     return () => clearInterval(statusInterval);
   }, []);
 
@@ -93,21 +93,21 @@ const Dashboard = () => {
         </div>
       ) : (
         <>
-          {/* MOBILE: Chart appears first */}
+          {}
           <div className="lg:hidden mb-6">
             <div className="animate-fade-in-up">
               <AISignals />
             </div>
           </div>
 
-          {/* MOBILE: AI Decision Feed appears right after chart */}
+          {}
           <div className="lg:hidden mb-6">
             <div className="animate-fade-in-up">
               <AIDecisionFeed />
             </div>
           </div>
 
-          {/* Portfolio Stats Cards */}
+          {}
           {portfolio && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 animate-fade-in-up">
               <div className="bg-white dark:bg-[#211A1A] rounded-2xl p-5 border border-landing-primary/10 shadow-sm">
@@ -139,7 +139,7 @@ const Dashboard = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-[1920px] mx-auto">
 
-            {/* LEFT COLUMN - Charts & Signals */}
+            {}
             <div className="col-span-1 lg:col-span-8 flex flex-col gap-6">
               <div className="hidden lg:block animate-fade-in-up delay-100">
                 <AISignals />
@@ -149,7 +149,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* RIGHT COLUMN - Quick Trade & AI Decisions */}
+            {}
             <div className="col-span-1 lg:col-span-4 flex flex-col gap-6">
               <div className="animate-fade-in-up delay-300">
                 <QuickTradeForm onSubmit={onSubmitTrade} portfolio={portfolio} marketOpen={marketOpen} />

@@ -7,7 +7,7 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #FDF9F9; /* Changed from #242424 to match your light theme */
+  background-color: #FDF9F9; 
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -32,17 +32,17 @@ a:hover {
   color: #c9869a;
 }
 
-/* --- THE CRITICAL FIX IS HERE --- */
+
 body {
   margin: 0;
   padding: 0;
-  /* Removed display: flex; and place-items: center; */
+  
   width: 100%;
   min-height: 100vh;
   overflow-x: hidden;
 }
 
-/* Ensure the React root div fills the screen */
+
 #root {
   width: 100%;
   min-height: 100vh;
@@ -90,7 +90,7 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
-/* Add to src/index.css */
+
 
 @keyframes fadeInUp {
   from {
@@ -105,7 +105,7 @@ button:focus-visible {
 
 .animate-fade-in-up {
   animation: fadeInUp 0.8s ease-out forwards;
-  opacity: 0; /* Start hidden */
+  opacity: 0; 
 }
 
 .delay-100 { animation-delay: 0.1s; }

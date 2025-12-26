@@ -1,4 +1,4 @@
-// server/routes/monitor.js
+
 import express from 'express';
 import Position from '../models/Position.js';
 import Order from '../models/Order.js';
@@ -7,11 +7,7 @@ import { updateLatestPrice } from '../controllers/marketController.js';
 
 const router = express.Router();
 
-/**
- * GET /api/positions
- * Optional query:
- *   - symbol=INFOSYS-EQ
- */
+
 router.get('/positions', async (req, res) => {
   try {
     const { symbol } = req.query;
@@ -24,9 +20,7 @@ router.get('/positions', async (req, res) => {
   }
 });
 
-/**
- * GET /api/positions/:symbol
- */
+
 router.get('/positions/:symbol', async (req, res) => {
   try {
     const { symbol } = req.params;
@@ -41,17 +35,12 @@ router.get('/positions/:symbol', async (req, res) => {
   }
 });
 
-/**
- * GET /api/orders
- * Query params:
- *   - symbol=INFOSYS-EQ (optional)
- *   - limit=50 (optional, default 50)
- */
+
 router.get('/orders', async (req, res) => {
   try {
     const { symbol, limit = 50 } = req.query;
     const filter = symbol ? { symbol } : {};
-    const lim = Math.min(Number(limit) || 50, 500); // safety cap
+    const lim = Math.min(Number(limit) || 50, 500); 
     const orders = await Order.find(filter)
       .sort({ createdAt: -1 })
       .limit(lim)
@@ -63,12 +52,7 @@ router.get('/orders', async (req, res) => {
   }
 });
 
-/**
- * GET /api/decisions
- * Query params:
- *   - symbol=INFOSYS-EQ (optional)
- *   - limit=50 (optional)
- */
+
 router.get('/decisions', async (req, res) => {
   try {
     const { symbol, limit = 50 } = req.query;
@@ -85,7 +69,7 @@ router.get('/decisions', async (req, res) => {
   }
 });
 
-// lightweight tick ingress to fan-out realtime prices to clients
+
 router.post('/tick', async (req, res) => {
   try {
     const io = req.app.locals.io;
@@ -99,12 +83,17 @@ router.post('/tick', async (req, res) => {
       ts: ts || Date.now(),
     };
     
-    // Store latest price in memory for market controller
+    
     updateLatestPrice(symbol, price, ts);
     
     if (io) {
       io.emit('tick', payload);
-      console.log('[Monitor] Tick emitted:', payload);
+      const clientCount = io.engine?.clientsCount || 0;
+      if (clientCount > 0) {
+        console.log(`[Monitor] Tick emitted to ${clientCount} clients:`, payload);
+      }
+    } else {
+      console.warn('[Monitor] WebSocket IO not available for tick broadcast');
     }
     res.json({ status: 'ok', forwarded: true });
   } catch (err) {

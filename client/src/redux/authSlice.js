@@ -20,7 +20,7 @@ const authSlice = createSlice({
       state.loading = false;
       state.isAuthenticated = true;
       state.user = action.payload.user;
-      // Do not store token in Redux/localStorage; rely on httpOnly cookies
+      
       state.token = null;
     },
     loginFail: (state, action) => {
@@ -38,7 +38,7 @@ const authSlice = createSlice({
       state.loading = false;
       state.isAuthenticated = true;
       state.user = action.payload.user;
-      // Do not store token in Redux/localStorage; rely on httpOnly cookies
+      
       state.token = null;
     },
     registerFail: (state, action) => {

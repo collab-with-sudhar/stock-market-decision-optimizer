@@ -1,4 +1,4 @@
-# realtime/smartapi_streamer.py
+
 
 """
 Real-time price streamer using SmartAPI WebSocket 2.0
@@ -55,7 +55,8 @@ from realtime.config_smartapi import (
 )
 agg = TickToCandle(window_minutes=WINDOW_SIZE)
 TICK_FANOUT_URL = "http://localhost:4000/api/tick"
-# -------------- Price Buffers (per-symbol) --------------
+
+from realtime.market_schedule import is_market_open
 
 
 class PriceBuffer:
@@ -76,10 +77,7 @@ class PriceBuffer:
         return list(self._buffers[symbol])
 
     def has_enough(self, symbol: str, min_len: int) -> bool:
-        return len(self._buffers[symbol]) >= min_len
-
-
-# -------------- SmartAPI login & websocket setup --------------
+        return len(self._buffers[symbol]) >= min_len
 
 
 def smartapi_login() -> Tuple[SmartConnect, str, str, str]:
@@ -106,10 +104,7 @@ def smartapi_login() -> Tuple[SmartConnect, str, str, str]:
     feed_token = smart.getfeedToken()
 
     logger.info("SmartAPI login successful. Feed token obtained.")
-    return smart, auth_token, refresh_token, feed_token
-
-
-# -------------- Backend call helper --------------
+    return smart, auth_token, refresh_token, feed_token
 
 
 def send_signal_to_backend(
@@ -136,23 +131,16 @@ def send_signal_to_backend(
             resp.text[:200],
         )
     except Exception as e:
-        logger.error("Error calling backend for %s: %s", symbol, e)
-
-
-# -------------- WebSocket callbacks --------------
+        logger.error("Error calling backend for %s: %s", symbol, e)
 
 
 def run_stream():
-    smart, auth_token, refresh_token, feed_token = smartapi_login()
-
-    # token list for WebSocket 2.0
+    smart, auth_token, refresh_token, feed_token = smartapi_login()
     token_list = []
     for symbol, (exchange_type, token) in SYMBOL_TOKEN_MAP.items():
         token_list.append({"exchangeType": int(exchange_type), "tokens": [str(token)]})
 
-    logger.info("Subscribing token_list: %s", token_list)
-
-    # Seed last WINDOW_SIZE+1 minute closes using historical API so we can predict from minute 1
+    logger.info("Subscribing token_list: %s", token_list)
     def exchange_from_type(exchange_type: int) -> str:
         mapping = {
             1: "NSE",
@@ -161,8 +149,7 @@ def run_stream():
         }
         return mapping.get(int(exchange_type), "NSE")
 
-    def _parse_candle_ts(ts_str: str) -> int:
-        # Try ISO format first (may include timezone)
+    def _parse_candle_ts(ts_str: str) -> int:
         try:
             s = ts_str.replace('Z', '+00:00')
             dt = datetime.datetime.fromisoformat(s)
@@ -171,8 +158,7 @@ def run_stream():
             dt_utc = dt.astimezone(timezone.utc)
             return int(dt_utc.timestamp() * 1000)
         except Exception:
-            pass
-        # Try common formats without seconds or with seconds
+            pass
         for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d %H:%M:%S"):
             try:
                 dt = datetime.datetime.strptime(ts_str, fmt)
@@ -206,9 +192,7 @@ def run_stream():
             }
             
             logger.info("[WARM_START] API params: %s", params)
-            resp = smart.getCandleData(params)
-            
-            # Log full response for debugging
+            resp = smart.getCandleData(params)
             logger.info("[WARM_START] API Response status: %s", resp.get("status") if resp else "No response")
             logger.info("[WARM_START] API Response message: %s", resp.get("message") if resp else "N/A")
             
@@ -224,9 +208,7 @@ def run_stream():
                 return
                 
             series = resp.get("data") or []
-            logger.info("[WARM_START] ✅ Received %d raw candles from SmartAPI for %s", len(series), symbol)
-            
-            # Log sample of raw data to verify it's real
+            logger.info("[WARM_START] ✅ Received %d raw candles from SmartAPI for %s", len(series), symbol)
             if series and len(series) > 0:
                 logger.info("[WARM_START] First candle sample: %s", series[0])
                 logger.info("[WARM_START] Last candle sample: %s", series[-1])
@@ -235,24 +217,16 @@ def run_stream():
                 logger.warning("[WARM_START]   1. Market is closed or outside trading hours")
                 logger.warning("[WARM_START]   2. Symbol token '%s' may be incorrect", token)
                 logger.warning("[WARM_START]   3. Time range has no data available")
-                logger.warning("[WARM_START]   4. Symbol may require different exchange type")
-            
-            # Expected format per entry: ["YYYY-MM-DD HH:MM", open, high, low, close, volume]
-            # IMPORTANT: For model input, use 'close' as LTP snapshot (end of that minute)
-            # This matches training data where 'Close' = end-of-period price
+                logger.warning("[WARM_START]   4. Symbol may require different exchange type")
             candles: List[Candle] = []
             for row in series:
                 try:
                     ts_str = row[0]
-                    o, h, l, c = float(row[1]), float(row[2]), float(row[3]), float(row[4])
-                    
-                    # SmartAPI may return prices in paise for some symbols
-                    # Heuristic: if close > 100000, likely in paise → convert to rupees
+                    o, h, l, c = float(row[1]), float(row[2]), float(row[3]), float(row[4])
                     if c > 100000:
                         o, h, l, c = o/100.0, h/100.0, l/100.0, c/100.0
                     
-                    ts_ms = _parse_candle_ts(ts_str)
-                    # Use close as ltp_snapshot since it represents LTP at end of that minute
+                    ts_ms = _parse_candle_ts(ts_str)
                     candles.append(Candle(ts=ts_ms, open=o, high=h, low=l, close=c, volume=0.0, ltp_snapshot=c))
                 except Exception as e:
                     logger.debug("[WARM_START] Failed to parse candle row %s: %s", row, e)
@@ -261,15 +235,9 @@ def run_stream():
             if not candles:
                 logger.warning("[WARM_START] ❌ No valid candles parsed for %s", symbol)
                 logger.info("[WARM_START] Will fall back to left-padding strategy")
-                return
-                
-            # SPEC: Sort chronologically (oldest to newest)
-            candles.sort(key=lambda x: x.ts)
-            
-            # Keep only the last WINDOW_SIZE+1 candles (ensures we have 21+ for immediate prediction)
-            seed = candles[-(WINDOW_SIZE + 1):] if len(candles) >= (WINDOW_SIZE + 1) else candles
-            
-            # Initialize aggregator history with historical candles
+                return
+            candles.sort(key=lambda x: x.ts)
+            seed = candles[-(WINDOW_SIZE + 1):] if len(candles) >= (WINDOW_SIZE + 1) else candles
             h = agg.history[symbol]
             h.clear()
             for cndl in seed:
@@ -292,9 +260,7 @@ def run_stream():
                 logger.info(
                     "[WARM_START] Close price range: ₹%.2f - ₹%.2f (avg: ₹%.2f)",
                     min(closes_list), max(closes_list), sum(closes_list)/len(closes_list)
-                )
-                
-                # Verify data is real by checking price variation
+                )
                 price_variation = max(closes_list) - min(closes_list)
                 price_variation_pct = (price_variation / min(closes_list) * 100) if min(closes_list) > 0 else 0
                 logger.info(
@@ -309,9 +275,7 @@ def run_stream():
                 
         except Exception as e:
             logger.error("[WARM_START] ❌ Exception during seeding for %s: %s", symbol, e, exc_info=True)
-            logger.info("[WARM_START] Will fall back to left-padding strategy")
-
-    # WARM-START PHASE: Initialize all symbols with historical candles
+            logger.info("[WARM_START] Will fall back to left-padding strategy")
     logger.info("=" * 60)
     logger.info("WARM-START PHASE: Initializing candle buffers")
     logger.info("=" * 60)
@@ -349,20 +313,14 @@ def run_stream():
         SMARTAPI_API_KEY,
         SMARTAPI_CLIENT_ID,
         feed_token,
-    )
-
-    # map from token -> symbol
+    )
     token_to_symbol = {
         str(token): symbol for symbol, (_, token) in SYMBOL_TOKEN_MAP.items()
-    }
-
-    # In a real system, you'd fetch current position per symbol from backend/DB.
-    # For now, we assume always flat (0).
+    }
     
 
     def on_data(wsapp, message):
-        try:
-            # parse message -> data dict (you already had this)
+        try:
             if isinstance(message, (bytes, bytearray)):
                 msg_str = message.decode("utf-8")
                 data = json.loads(msg_str)
@@ -380,70 +338,53 @@ def run_stream():
             if raw_ltp is None:
                 return
             last_price = float(raw_ltp) / 100.0
-            ts_ms = data.get("exchange_timestamp") or int(time.time()*1000)
-            
-            
-            # add tick to aggregator
-            closed = agg.add_tick(symbol, last_price, ts_ms=ts_ms)
-
-            # debug: show current minute closes len
+            ts_ms = data.get("exchange_timestamp") or int(time.time()*1000)
+            closed = agg.add_tick(symbol, last_price, ts_ms=ts_ms)
             closes_count = agg.get_history_count(symbol)
-            logger.debug("[tick] %s price=%.2f history_len=%d", symbol, last_price, closes_count)
-
-            # fan-out raw tick to backend so UI sockets can render micro-candles
+            logger.debug("[tick] %s price=%.2f history_len=%d", symbol, last_price, closes_count)
             try:
                 requests.post(TICK_FANOUT_URL, json={"symbol": symbol, "price": last_price, "ts": ts_ms}, timeout=1)
             except Exception:
                 logger.debug("Tick fanout failed for %s", symbol)
 
-            if closed is not None:
-                # SPEC: A 1-minute candle has completed
+            if closed is not None:
                 sym, candle = closed
                 ltp_at_boundary = candle.ltp_snapshot if candle.ltp_snapshot > 0 else candle.close
                 logger.info("[CANDLE_CLOSE] %s | LTP_snapshot=%.2f (candle_close=%.2f)", 
-                           sym, ltp_at_boundary, candle.close)
-
-                # SPEC COMPLIANCE: Send exactly 21 LTP snapshots (at minute boundaries)
-                # This matches training data where we use Close prices (end-of-period LTP)
-                # Get LTP snapshots from aggregator history
+                           sym, ltp_at_boundary, candle.close)
                 candle_closes = agg.get_closes(sym)  # Returns ltp_snapshot values
                 
-                if len(candle_closes) >= 21:
-                    # We have 21+ candles, use the last 21
+                if len(candle_closes) >= 21:
                     prices_to_send = candle_closes[-21:]
                     pad_count = 0
-                else:
-                    # Fewer than 21 candles: LEFT-PAD with the earliest available close
-                    # SPEC: "If fewer than 21 candles exist, left-pad the sequence using the earliest available close price"
+                else:
                     if len(candle_closes) > 0:
                         earliest_close = candle_closes[0]
                         pad_count = 21 - len(candle_closes)
                         prices_to_send = [earliest_close] * pad_count + candle_closes
-                    else:
-                        # No completed candles yet (startup scenario)
+                    else:
                         logger.debug("[DECISION_SKIP] %s | No completed candles yet", sym)
                         prices_to_send = None
                         pad_count = 0
                 
-                if prices_to_send and len(prices_to_send) == 21:
-                    logger.info("[DECISION_TRIGGER] %s | 21 candles ready (padded=%d real=%d)",
-                                sym, pad_count, len(candle_closes))
-                    
-                    send_signal_to_backend(
-                        closes=prices_to_send,
-                        symbol=sym,
-                        last_price=candle.close,
-                        dry_run=True,
-                    )
-
-            # collect current tick into the ongoing minute buffer
-            # NOTE: No longer needed - we use completed candles from aggregator
+                if prices_to_send and len(prices_to_send) == 21:
+                    if is_market_open():
+                        logger.info("[DECISION_TRIGGER] %s | 21 candles ready (padded=%d real=%d)",
+                                    sym, pad_count, len(candle_closes))
+                        
+                        send_signal_to_backend(
+                            closes=prices_to_send,
+                            symbol=sym,
+                            last_price=candle.close,
+                            dry_run=True,
+                        )
+                    else:
+                        logger.debug("[DECISION_SKIP] Market is closed/Holiday. %s", sym)
         except Exception as e:
             logger.exception("Error in on_data: %s", e)
     def on_open(wsapp):
         logger.info("WebSocket opened, subscribing to tokens...")
-        try:
-            # action=1 => subscribe; mode=1 => LTP (check docs for other modes)
+        try:
             sws.subscribe(correlation_id="corr-1", mode=1, token_list=token_list)
         except Exception as e:
             logger.error("Error sending subscribe: %s", e)
@@ -457,9 +398,7 @@ def run_stream():
     sws.on_data = on_data
     sws.on_open = on_open
     sws.on_error = on_error
-    sws.on_close = on_close
-
-    # Run websocket in separate thread so main thread can stay alive
+    sws.on_close = on_close
     t = threading.Thread(target=sws.connect, daemon=True)
     t.start()
 

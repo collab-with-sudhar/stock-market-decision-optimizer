@@ -1,4 +1,4 @@
-# src/finetune.py
+
 import argparse
 from pathlib import Path
 import pandas as pd
@@ -31,11 +31,8 @@ def make_env():
                               trade_penalty=0.0002, risk_aversion=0.0)
 
 env = DummyVecEnv([make_env])
-env = VecNormalize(env, norm_obs=True, norm_reward=False)
-
-# load model
-model = PPO.load(str(model_in), env=env)
-# reduce learning rate for fine-tuning
+env = VecNormalize(env, norm_obs=True, norm_reward=False)
+model = PPO.load(str(model_in), env=env)
 model.learning_rate = args.lr
 
 print(f"Fine-tuning {model_in} on {csv_path} for {args.timesteps} timesteps")

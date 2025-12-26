@@ -17,7 +17,7 @@ const TradeSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  // Entry details
+  
   entryOrderId: {
     type: String,
     required: true
@@ -40,7 +40,7 @@ const TradeSchema = new mongoose.Schema({
     default: Date.now
   },
 
-  // Exit details
+  
   exitOrderId: {
     type: String
   },
@@ -58,7 +58,7 @@ const TradeSchema = new mongoose.Schema({
     type: Date
   },
 
-  // Status
+  
   status: {
     type: String,
     enum: ['OPEN', 'CLOSED', 'PARTIAL'],
@@ -66,7 +66,7 @@ const TradeSchema = new mongoose.Schema({
     index: true
   },
 
-  // P&L Calculations
+  
   pnl: {
     type: Number,
     default: 0
@@ -84,7 +84,7 @@ const TradeSchema = new mongoose.Schema({
     default: 0
   },
 
-  // Duration
+  
   holdingDays: {
     type: Number,
     default: 0
@@ -98,7 +98,7 @@ const TradeSchema = new mongoose.Schema({
     default: 0
   },
 
-  // Metadata
+  
   createdAt: {
     type: Date,
     default: Date.now,
@@ -109,22 +109,22 @@ const TradeSchema = new mongoose.Schema({
   }
 });
 
-// Index for faster queries
+
 TradeSchema.index({ userId: 1, createdAt: -1 });
 TradeSchema.index({ userId: 1, status: 1 });
 TradeSchema.index({ userId: 1, symbol: 1 });
 
-// Calculate holding duration
-TradeSchema.methods.calculateHoldingDuration = function() {
+
+TradeSchema.methods.calculateHoldingDuration = function () {
   if (!this.exitTime) return null;
-  
+
   const duration = this.exitTime - this.entryTime;
   const totalMinutes = Math.floor(duration / (1000 * 60));
-  
+
   this.holdingDays = Math.floor(totalMinutes / (24 * 60));
   this.holdingHours = Math.floor((totalMinutes % (24 * 60)) / 60);
   this.holdingMinutes = totalMinutes % 60;
-  
+
   return {
     days: this.holdingDays,
     hours: this.holdingHours,
@@ -133,23 +133,28 @@ TradeSchema.methods.calculateHoldingDuration = function() {
   };
 };
 
-// Calculate P&L
-TradeSchema.methods.calculatePnL = function(brokerage = 0) {
+
+TradeSchema.methods.calculatePnL = function (brokerage = 0) {
   if (!this.exitPrice || !this.exitQuantity) return null;
-  
+
   const entryTotal = this.entryPrice * this.entryQuantity;
   const exitTotal = this.exitPrice * this.exitQuantity;
-  
+
   if (this.entrySide === 'BUY') {
     this.pnl = exitTotal - entryTotal;
   } else {
     this.pnl = entryTotal - exitTotal;
   }
+
   
-  this.pnlPercent = (this.pnl / entryTotal) * 100;
+  if (entryTotal > 0) {
+    this.pnlPercent = (this.pnl / entryTotal) * 100;
+  } else {
+    this.pnlPercent = 0;
+  }
   this.brokerage = brokerage;
   this.netPnL = this.pnl - brokerage;
-  
+
   return {
     pnl: this.pnl,
     pnlPercent: this.pnlPercent,

@@ -7,24 +7,24 @@ import ErrorHandler from "../utils/errorhander.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// In-memory storage for LTP (Last Traded Price) and tick history
-const ltpStore = new Map();
-const tickHistoryStore = new Map(); // Keep last 60 ticks per symbol
 
-// Store LTP from tick (called from monitor route)
+const ltpStore = new Map();
+const tickHistoryStore = new Map(); 
+
+
 export const updateLatestPrice = (symbol, price, timestamp) => {
   const upperSymbol = symbol.toUpperCase();
   const numPrice = Number(price);
   const now = timestamp || Date.now();
+
   
-  // Update LTP
   ltpStore.set(upperSymbol, {
     ltp: numPrice,
     timestamp: now,
     updatedAt: new Date().toISOString(),
   });
+
   
-  // Store tick in history (keep last 60)
   if (!tickHistoryStore.has(upperSymbol)) {
     tickHistoryStore.set(upperSymbol, []);
   }
@@ -38,20 +38,20 @@ export const updateLatestPrice = (symbol, price, timestamp) => {
   }
 };
 
-// @desc    Get current LTP from smartapi_streamer
-// @route   GET /api/market/live-price
-// @access  Public
+
+
+
 export const getLivePrice = catchAsyncErrors(async (req, res, next) => {
   const { symbol = 'NIFTY' } = req.query;
   const upperSymbol = symbol.toUpperCase();
-  
+
   const ltpData = ltpStore.get(upperSymbol);
-  
+
   if (!ltpData) {
     return next(new ErrorHandler(`No live price data available for ${symbol}`, 404));
   }
 
-  // Calculate stats from tick history
+  
   const history = tickHistoryStore.get(upperSymbol) || [];
   const high = history.length > 0 ? Math.max(...history.map(t => t.price)) : ltpData.ltp;
   const low = history.length > 0 ? Math.min(...history.map(t => t.price)) : ltpData.ltp;
@@ -72,32 +72,32 @@ export const getLivePrice = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-// @desc    Get latest closing price for NIFTY
-// @route   GET /api/market/closing-price
-// @access  Public
+
+
+
 export const getClosingPrice = catchAsyncErrors(async (req, res, next) => {
   const { symbol = 'NIFTY' } = req.query;
 
   try {
-    // Path to the latest data file (tmp_test_slice.csv contains most recent data)
-    const dataPath = path.join(__dirname, '../../data/tmp_test_slice.csv');
     
+    const dataPath = path.join(__dirname, '../../data/tmp_test_slice.csv');
+
     if (!fs.existsSync(dataPath)) {
       return next(new ErrorHandler("Market data file not found", 404));
     }
 
     const fileContent = fs.readFileSync(dataPath, 'utf-8');
     const lines = fileContent.trim().split('\n');
-    
+
     if (lines.length < 2) {
       return next(new ErrorHandler("No market data available", 404));
     }
 
-    // Get the last line (most recent trading day)
+    
     const lastLine = lines[lines.length - 1];
     const columns = lastLine.split(',');
+
     
-    // CSV format: Date,Close,High,Low,Open,Volume
     const closingPrice = parseFloat(columns[1]);
     const date = columns[0];
     const high = parseFloat(columns[2]);
@@ -126,24 +126,24 @@ export const getClosingPrice = catchAsyncErrors(async (req, res, next) => {
   }
 });
 
-// @desc    Get market status (open/closed)
-// @route   GET /api/market/status
-// @access  Public
+
+
+
 export const getMarketStatus = catchAsyncErrors(async (req, res, next) => {
-  // Get current time in IST (UTC+5:30) using toLocaleString
+  
   const now = new Date();
   const istTimeString = now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
   const istTime = new Date(istTimeString);
-  
-  const day = istTime.getDay(); // 0=Sun, 6=Sat
+
+  const day = istTime.getDay(); 
   const hours = istTime.getHours();
   const minutes = istTime.getMinutes();
   const totalMinutes = hours * 60 + minutes;
 
-  // NSE trading hours: 9:15 AM to 3:30 PM IST (Mon-Fri)
+  
   const isWeekday = day >= 1 && day <= 5;
-  const openMinutes = 9 * 60 + 15; // 9:15 AM = 555 minutes
-  const closeMinutes = 15 * 60 + 30; // 3:30 PM = 930 minutes
+  const openMinutes = 9 * 60 + 15; 
+  const closeMinutes = 15 * 60 + 30; 
   const isWithinTradingHours = totalMinutes >= openMinutes && totalMinutes <= closeMinutes;
 
   const isOpen = isWeekday && isWithinTradingHours;

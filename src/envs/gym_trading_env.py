@@ -18,9 +18,7 @@ class SimpleTradingEnv(gym.Env):
 
         self.df = df
         self.window = window_size
-        self.transaction_cost = transaction_cost
-
-        # observation: window of normalized close returns + position flag
+        self.transaction_cost = transaction_cost
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(window_size+1,), dtype=np.float32)
         self.action_space = spaces.Discrete(3)  # 0=hold,1=buy,2=sell
 

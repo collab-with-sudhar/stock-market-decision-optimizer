@@ -1,12 +1,12 @@
-// server/models/Order.js
+
 import mongoose from 'mongoose';
 
 const OrderSchema = new mongoose.Schema({
-  userId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User', 
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     required: true,
-    index: true 
+    index: true
   },
   orderId: { type: String, required: true, unique: true },
   symbol: { type: String, required: true },
@@ -14,14 +14,14 @@ const OrderSchema = new mongoose.Schema({
   quantity: { type: Number, required: true },
   price: { type: Number, required: true },
   orderType: { type: String, enum: ['MARKET', 'LIMIT'], default: 'MARKET' },
-  status: { type: String, default: 'CREATED' }, // CREATED, FILLED, CANCELLED
+  status: { type: String, default: 'CREATED' }, 
   decisionRef: { type: mongoose.Schema.Types.ObjectId, ref: 'Decision' },
   raw: { type: mongoose.Schema.Types.Mixed },
   createdAt: { type: Date, default: Date.now },
   filledAt: { type: Date },
 });
 
-// Index for faster user-specific queries
+
 OrderSchema.index({ userId: 1, createdAt: -1 });
 
 const Order = mongoose.model('Order', OrderSchema);

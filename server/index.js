@@ -1,4 +1,4 @@
-// server/index.js
+
 import 'dotenv/config';
 import express from 'express';
 import http from 'http';
@@ -17,7 +17,7 @@ import marketRouter from './routes/market.js';
 const PORT = process.env.PORT || 4000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/stock_rl';
 
-// logger
+
 const logger = winston.createLogger({
   level: 'info',
   transports: [new winston.transports.Console({ format: winston.format.simple() })],
@@ -65,7 +65,7 @@ async function start() {
     socket.on('disconnect', () => logger.info(`Socket disconnected: ${socket.id}`));
   });
 
-  // Error handling middleware
+  
   app.use((err, req, res, next) => {
     err.statusCode = err.statusCode || 500;
     err.message = err.message || "Internal Server Error";

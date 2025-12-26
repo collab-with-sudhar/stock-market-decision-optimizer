@@ -12,14 +12,19 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { ToastProvider } from './contexts/ToastContext.jsx';
 import { ToastContainer } from './components/ToastContainer.jsx';
 import { loadUser, logout } from './redux/authSlice.js';
+import HowItWorksPage from './pages/HowItWorksPage.jsx';
+import { useWebSocket } from './hooks/useWebSocket.js';
 
 const AppContent = () => {
   const dispatch = useDispatch();
   const { isAuthenticated, loading } = useSelector((state) => state.auth);
   const [initializing, setInitializing] = React.useState(true);
+  
+  
+  const { socketConnected } = useWebSocket();
 
   useEffect(() => {
-    // Attempt to load user via httpOnly cookie on app start
+    
     const loadUserData = async () => {
       try {
         const { authApi } = await import('./api/authApi.js');
@@ -40,7 +45,7 @@ const AppContent = () => {
     loadUserData();
   }, [dispatch]);
 
-  // Show loading screen while checking auth
+  
   if (initializing) {
     return (
       <div className="flex items-center justify-center h-screen bg-[#FDF9F9] dark:bg-[#1A1212]">
@@ -56,38 +61,39 @@ const AppContent = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route 
-          path="/login" 
-          element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} 
+        <Route
+          path="/login"
+          element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
         />
-        <Route 
-          path="/signup" 
-          element={isAuthenticated ? <Navigate to="/" replace /> : <Signup />} 
+        <Route
+          path="/signup"
+          element={isAuthenticated ? <Navigate to="/" replace /> : <Signup />}
         />
-        <Route 
-          path="/dashboard" 
+        <Route
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <Dashboard />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/portfolio" 
+        <Route
+          path="/portfolio"
           element={
             <ProtectedRoute>
               <Portfolio />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/orders" 
+        <Route
+          path="/orders"
           element={
             <ProtectedRoute>
               <Orders />
             </ProtectedRoute>
-          } 
+          }
         />
+        <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <ToastContainer />

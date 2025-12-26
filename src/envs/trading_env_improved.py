@@ -1,4 +1,4 @@
-# src/envs/trading_env_improved.py
+
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -22,8 +22,7 @@ class TradingEnvImproved(gym.Env):
                  trade_penalty: float = 0.0,
                  risk_aversion: float = 0.0,
                  reward_norm: bool = True):
-        super().__init__()
-        # copy and clean
+        super().__init__()
         df = df.copy()
         if 'Date' in df.columns:
             df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
@@ -37,9 +36,7 @@ class TradingEnvImproved(gym.Env):
         self.slippage = slippage
         self.trade_penalty = trade_penalty
         self.risk_aversion = risk_aversion
-        self.reward_norm = reward_norm
-
-        # observation: window of returns + position flag
+        self.reward_norm = reward_norm
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(window_size + 1,), dtype=np.float32)
         self.action_space = spaces.Discrete(3)
 
@@ -60,13 +57,10 @@ class TradingEnvImproved(gym.Env):
 
     def _get_obs(self):
         start = self.current_step - self.window
-        prices = self.df.loc[start:self.current_step-1, 'Close'].values.astype(float)
-        # use returns as input
-        returns = np.diff(prices) / prices[:-1]
-        # if window N, returns length = N-1; pad to window
+        prices = self.df.loc[start:self.current_step-1, 'Close'].values.astype(float)
+        returns = np.diff(prices) / prices[:-1]
         if len(returns) < self.window:
-            returns = np.pad(returns, (self.window - len(returns), 0), 'constant')
-        # normalize returns by rolling std if available
+            returns = np.pad(returns, (self.window - len(returns), 0), 'constant')
         std = returns.std() if returns.std() > 0 else 1.0
         returns = returns / std
         obs = np.concatenate([returns[-self.window:], [float(self.position)]])
@@ -76,10 +70,8 @@ class TradingEnvImproved(gym.Env):
         price = float(self.df.loc[self.current_step, 'Close'])
         prev_val = self._portfolio_value(self.df.loc[self.current_step-1, 'Close'])
 
-        traded = False
-        # execute action with slippage and cost
-        if action == 1 and self.position == 0:  # buy
-            # slippage increases effective buy price
+        traded = False
+        if action == 1 and self.position == 0:  # buy
             exec_price = price * (1.0 + self.slippage)
             self.holdings = self.cash / exec_price
             self.cash = 0.0
@@ -90,39 +82,26 @@ class TradingEnvImproved(gym.Env):
             self.cash = self.holdings * exec_price
             self.holdings = 0.0
             self.position = 0
-            traded = True
-
-        # apply proportional transaction cost on trade (on traded notional)
-        if traded and self.transaction_cost > 0:
-            # approximate notional = exec_price * holdings (if selling) or cash used
-            if action == 1:
-                # bought with full cash: cost applied to cash
+            traded = True
+        if traded and self.transaction_cost > 0:
+            if action == 1:
                 cost = self.transaction_cost * 1.0
                 self.cash = max(0.0, self.cash - cost)
-            else:
-                # on sell: cost applied to cash proceeds
+            else:
                 cost = self.transaction_cost * self.cash
-                self.cash = max(0.0, self.cash - cost)
-
-        # portfolio update
+                self.cash = max(0.0, self.cash - cost)
         self.current_step += 1
         new_price = float(self.df.loc[self.current_step, 'Close'])
         curr_val = self._portfolio_value(new_price)
-        raw_reward = curr_val - prev_val
-
-        # trade penalty
-        trade_penalty = self.trade_penalty if traded else 0.0
-
-        # risk penalty (based on drawdown from peak)
+        raw_reward = curr_val - prev_val
+        trade_penalty = self.trade_penalty if traded else 0.0
         self.equity_curve.append(curr_val)
         if curr_val > self.peak:
             self.peak = curr_val
         drawdown = (self.peak - curr_val) / self.peak if self.peak > 0 else 0.0
         risk_penalty = self.risk_aversion * drawdown
 
-        reward = raw_reward - trade_penalty - risk_penalty
-
-        # optional normalization: scale reward by previous portfolio to get relative return
+        reward = raw_reward - trade_penalty - risk_penalty
         if self.reward_norm and prev_val != 0:
             reward = reward / prev_val
 

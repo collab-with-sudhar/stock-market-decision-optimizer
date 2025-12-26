@@ -12,7 +12,7 @@ const portfolioSlice = createSlice({
   name: 'portfolio',
   initialState,
   reducers: {
-    // Fetch portfolio
+    
     fetchPortfolioStart: (state) => {
       state.loading = true;
       state.error = null;
@@ -28,14 +28,14 @@ const portfolioSlice = createSlice({
       state.error = action.payload;
     },
 
-    // Update portfolio
+    
     updatePortfolioStart: (state) => {
       state.loading = true;
       state.error = null;
     },
     updatePortfolioSuccess: (state, action) => {
       state.loading = false;
-      // The payload is already the summary data
+      
       state.summary = action.payload;
       state.positions = action.payload.positions || [];
       state.lastUpdated = new Date().toISOString();
@@ -45,7 +45,7 @@ const portfolioSlice = createSlice({
       state.error = action.payload;
     },
 
-    // Clear error
+    
     clearError: (state) => {
       state.error = null;
     },

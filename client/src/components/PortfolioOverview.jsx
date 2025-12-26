@@ -27,7 +27,7 @@ export const PortfolioOverview = () => {
       }
     };
 
-    // Fetch on mount and every 10 seconds
+    
     fetchPortfolio();
     const interval = setInterval(fetchPortfolio, 10000);
     return () => clearInterval(interval);
@@ -46,10 +46,10 @@ export const PortfolioOverview = () => {
 
   return (
     <div className="bg-white dark:bg-[#211A1A] rounded-3xl p-8 shadow-xl border border-landing-primary/10 relative overflow-hidden">
-      {/* Background Decor */}
+      {}
       <div className="absolute -top-20 -right-20 w-80 h-80 bg-landing-primary/10 rounded-full blur-[80px] pointer-events-none"></div>
 
-      {/* Header */}
+      {}
       <div className="flex items-center justify-between mb-6 z-10">
         <div className="flex items-center gap-3">
           <span className="material-symbols-outlined text-landing-primary text-3xl">portfolio</span>
@@ -60,17 +60,16 @@ export const PortfolioOverview = () => {
         </div>
       </div>
 
-      {/* Tab Navigation */}
+      {}
       <div className="flex gap-2 mb-6 z-10 bg-[#FDF9F9] dark:bg-[#161212] p-1 rounded-lg w-fit">
         {['overview', 'positions', 'metrics', 'trades'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-              activeTab === tab
+            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${activeTab === tab
                 ? 'bg-white dark:bg-[#211A1A] text-landing-primary shadow-sm'
                 : 'text-landing-muted hover:text-landing-text'
-            }`}
+              }`}
           >
             {tab === 'overview' && '📊 Overview'}
             {tab === 'positions' && '📈 Positions'}
@@ -80,33 +79,33 @@ export const PortfolioOverview = () => {
         ))}
       </div>
 
-      {/* OVERVIEW TAB */}
+      {}
       {activeTab === 'overview' && (
         <div className="z-10 space-y-6">
-          {/* Balance Summary Cards */}
+          {}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Initial Balance */}
+            {}
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
               <p className="text-xs text-blue-600 dark:text-blue-300 font-bold uppercase mb-1">Initial Balance</p>
               <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">₹{parseFloat(summary.initialBalance).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
             </div>
 
-            {/* Current Balance */}
+            {}
             <div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/20 border border-purple-200 dark:border-purple-700 rounded-xl p-4">
               <p className="text-xs text-purple-600 dark:text-purple-300 font-bold uppercase mb-1">Cash Balance</p>
               <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">₹{parseFloat(summary.currentBalance).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
             </div>
 
-            {/* Total Balance */}
+            {}
             <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/20 border border-indigo-200 dark:border-indigo-700 rounded-xl p-4">
               <p className="text-xs text-indigo-600 dark:text-indigo-300 font-bold uppercase mb-1">Total Balance</p>
               <p className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">₹{parseFloat(summary.totalBalance).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
             </div>
           </div>
 
-          {/* P&L Summary */}
+          {}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Unrealized P&L */}
+            {}
             <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4">
               <p className="text-xs text-emerald-600 dark:text-emerald-300 font-bold uppercase mb-2">Unrealized P&L</p>
               <p className={`text-2xl font-bold ${parseFloat(summary.unrealizedPnL) >= 0 ? 'text-emerald-900 dark:text-emerald-100' : 'text-red-900 dark:text-red-100'}`}>
@@ -115,7 +114,7 @@ export const PortfolioOverview = () => {
               <p className="text-xs text-emerald-700 dark:text-emerald-200 mt-1">({parseFloat(summary.unrealizedPnLPercent).toFixed(2)}%)</p>
             </div>
 
-            {/* Realized P&L */}
+            {}
             <div className={`bg-gradient-to-br ${parseFloat(summary.realizedPnL) >= 0 ? 'from-cyan-50 to-cyan-100 dark:from-cyan-900/30 dark:to-cyan-800/20 border-cyan-200 dark:border-cyan-700' : 'from-rose-50 to-rose-100 dark:from-rose-900/30 dark:to-rose-800/20 border-rose-200 dark:border-rose-700'} border rounded-xl p-4`}>
               <p className={`text-xs font-bold uppercase mb-2 ${parseFloat(summary.realizedPnL) >= 0 ? 'text-cyan-600 dark:text-cyan-300' : 'text-rose-600 dark:text-rose-300'}`}>Realized P&L</p>
               <p className={`text-2xl font-bold ${parseFloat(summary.realizedPnL) >= 0 ? 'text-cyan-900 dark:text-cyan-100' : 'text-rose-900 dark:text-rose-100'}`}>
@@ -123,7 +122,7 @@ export const PortfolioOverview = () => {
               </p>
             </div>
 
-            {/* Total P&L */}
+            {}
             <div className={`bg-gradient-to-br ${parseFloat(summary.totalPnL) >= 0 ? 'from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/20 border-green-200 dark:border-green-700' : 'from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/20 border-red-200 dark:border-red-700'} border rounded-xl p-4`}>
               <p className={`text-xs font-bold uppercase mb-2 ${parseFloat(summary.totalPnL) >= 0 ? 'text-green-600 dark:text-green-300' : 'text-red-600 dark:text-red-300'}`}>Total P&L</p>
               <p className={`text-2xl font-bold ${parseFloat(summary.totalPnL) >= 0 ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100'}`}>
@@ -132,7 +131,7 @@ export const PortfolioOverview = () => {
             </div>
           </div>
 
-          {/* Return Summary */}
+          {}
           <div className="bg-[#FDF9F9] dark:bg-[#161212] rounded-xl p-4 border border-landing-primary/10">
             <h4 className="text-sm font-bold text-landing-text dark:text-white mb-3 flex items-center gap-2">
               <span className="material-symbols-outlined text-landing-primary">trending_up</span>
@@ -152,7 +151,7 @@ export const PortfolioOverview = () => {
         </div>
       )}
 
-      {/* POSITIONS TAB */}
+      {}
       {activeTab === 'positions' && (
         <div className="z-10">
           {summary.positions && summary.positions.length > 0 ? (
@@ -200,10 +199,10 @@ export const PortfolioOverview = () => {
         </div>
       )}
 
-      {/* METRICS TAB */}
+      {}
       {activeTab === 'metrics' && (
         <div className="z-10 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Trade Statistics */}
+          {}
           <div className="bg-[#FDF9F9] dark:bg-[#161212] rounded-xl p-4 border border-landing-primary/10">
             <h4 className="text-sm font-bold text-landing-text dark:text-white mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined">bar_chart</span>
@@ -235,7 +234,7 @@ export const PortfolioOverview = () => {
             </div>
           </div>
 
-          {/* Performance Metrics */}
+          {}
           <div className="bg-[#FDF9F9] dark:bg-[#161212] rounded-xl p-4 border border-landing-primary/10">
             <h4 className="text-sm font-bold text-landing-text dark:text-white mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined">trending_up</span>
@@ -258,12 +257,18 @@ export const PortfolioOverview = () => {
                 <span className="text-xs text-landing-muted">Avg Loss</span>
                 <span className="font-bold text-red-600 dark:text-red-400">₹{parseFloat(summary.avgLoss).toFixed(2)}</span>
               </div>
+              <div className="flex justify-between items-center border-t border-landing-primary/10 pt-2 mt-2">
+                <span className="text-xs text-landing-muted">Avg Trade ROI</span>
+                <span className={`font-bold ${parseFloat(summary.tradeReturnPercent) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {parseFloat(summary.tradeReturnPercent) >= 0 ? '+' : ''}{parseFloat(summary.tradeReturnPercent).toFixed(2)}%
+                </span>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* TRADES TAB */}
+      {}
       {activeTab === 'trades' && (
         <TradeHistory />
       )}
@@ -271,7 +276,7 @@ export const PortfolioOverview = () => {
   );
 };
 
-// Trade History Component
+
 const TradeHistory = () => {
   const toast = useToast();
   const [trades, setTrades] = useState([]);
@@ -302,24 +307,23 @@ const TradeHistory = () => {
 
   return (
     <div className="z-10">
-      {/* Filter */}
+      {}
       <div className="flex gap-2 mb-4">
         {['CLOSED', 'OPEN'].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${
-              filter === f
+            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${filter === f
                 ? 'bg-landing-primary text-white'
                 : 'bg-[#FDF9F9] dark:bg-[#161212] text-landing-text dark:text-white hover:bg-landing-primary/10'
-            }`}
+              }`}
           >
             {f}
           </button>
         ))}
       </div>
 
-      {/* Trade List */}
+      {}
       {loading ? (
         <div className="text-center py-8">
           <div className="animate-spin text-landing-primary mb-2">⟳</div>

@@ -16,7 +16,7 @@ const Portfolio = () => {
   const [tradesLoading, setTradesLoading] = useState(false);
   const [tradeFilter, setTradeFilter] = useState('ALL');
 
-  // Fetch portfolio summary
+  
   useEffect(() => {
     const fetchPortfolio = async () => {
       dispatch(updatePortfolioStart());
@@ -24,7 +24,7 @@ const Portfolio = () => {
         const response = await axiosInstance.get('/trading/portfolio/summary');
         console.log('[Portfolio] API Response:', response.data);
         if (response.data?.success) {
-          // API returns data in response.data.summary
+          
           dispatch(updatePortfolioSuccess(response.data.summary || response.data));
         } else {
           throw new Error(response.data?.message || 'Failed to fetch portfolio');
@@ -40,7 +40,7 @@ const Portfolio = () => {
     return () => clearInterval(interval);
   }, [dispatch]);
 
-  // Fetch trade history
+  
   useEffect(() => {
     const fetchTrades = async () => {
       setTradesLoading(true);
@@ -71,7 +71,7 @@ const Portfolio = () => {
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-6">
         
-        {/* Page Header */}
+        {}
         <div className="flex items-center justify-between">
           <div>
                 <h1 className="text-3xl font-display font-bold text-landing-text dark:text-white mb-2">
@@ -92,7 +92,7 @@ const Portfolio = () => {
               </div>
             </div>
 
-            {/* Tabs */}
+            {}
             <div className="bg-white dark:bg-[#211A1A] rounded-2xl shadow-lg border border-landing-primary/10 p-2">
               <div className="flex gap-2 overflow-x-auto">
                 {['overview', 'positions', 'metrics', 'trades'].map((tab) => (
@@ -111,7 +111,7 @@ const Portfolio = () => {
               </div>
             </div>
 
-            {/* Loading State */}
+            {}
             {loading && (
               <div className="bg-white dark:bg-[#211A1A] rounded-2xl p-12 text-center shadow-lg border border-landing-primary/10">
                 <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-landing-primary border-r-transparent"></div>
@@ -119,7 +119,7 @@ const Portfolio = () => {
               </div>
             )}
 
-            {/* Error State */}
+            {}
             {error && (
               <div className="bg-white dark:bg-[#211A1A] rounded-2xl p-12 text-center shadow-lg border border-red-500/20">
                 <span className="material-symbols-outlined text-red-500 text-4xl mb-2">error</span>
@@ -127,10 +127,10 @@ const Portfolio = () => {
               </div>
             )}
 
-            {/* Overview Tab */}
+            {}
             {!loading && !error && activeTab === 'overview' && (
               <div className="space-y-6">
-                {/* Balance Cards */}
+                {}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="bg-white dark:bg-[#211A1A] rounded-2xl p-6 shadow-lg border border-landing-primary/10">
                     <div className="flex items-center justify-between mb-3">
@@ -166,7 +166,7 @@ const Portfolio = () => {
                   </div>
                 </div>
 
-                {/* P&L Cards */}
+                {}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className={`rounded-2xl p-6 shadow-lg border ${
                     (summary?.unrealizedPnL || 0) >= 0
@@ -218,7 +218,7 @@ const Portfolio = () => {
                   </div>
                 </div>
 
-                {/* Return Metrics */}
+                {}
                 <div className="bg-white dark:bg-[#211A1A] rounded-2xl p-6 shadow-lg border border-landing-primary/10">
                   <h3 className="text-lg font-bold text-landing-text dark:text-white mb-4">Return Metrics</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -241,7 +241,7 @@ const Portfolio = () => {
               </div>
             )}
 
-            {/* Positions Tab */}
+            {}
             {!loading && !error && activeTab === 'positions' && (
               <div className="bg-white dark:bg-[#211A1A] rounded-2xl shadow-lg border border-landing-primary/10 overflow-hidden">
                 <div className="p-5 border-b border-landing-primary/10">
@@ -311,10 +311,10 @@ const Portfolio = () => {
               </div>
             )}
 
-            {/* Metrics Tab */}
+            {}
             {!loading && !error && activeTab === 'metrics' && (
               <div className="space-y-6">
-                {/* Trade Statistics */}
+                {}
                 <div className="bg-white dark:bg-[#211A1A] rounded-2xl p-6 shadow-lg border border-landing-primary/10">
                   <h3 className="text-lg font-bold text-landing-text dark:text-white mb-4">Trade Statistics</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -341,7 +341,7 @@ const Portfolio = () => {
                   </div>
                 </div>
 
-                {/* Performance Metrics */}
+                {}
                 <div className="bg-white dark:bg-[#211A1A] rounded-2xl p-6 shadow-lg border border-landing-primary/10">
                   <h3 className="text-lg font-bold text-landing-text dark:text-white mb-4">Performance Metrics</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -378,10 +378,10 @@ const Portfolio = () => {
               </div>
             )}
 
-            {/* Trades Tab */}
+            {}
             {!loading && !error && activeTab === 'trades' && (
               <div className="space-y-4">
-                {/* Trade Filters */}
+                {}
                 <div className="bg-white dark:bg-[#211A1A] rounded-2xl p-5 shadow-lg border border-landing-primary/10">
                   <div className="flex gap-2 flex-wrap">
                     {['ALL', 'CLOSED', 'OPEN'].map((filter) => (
@@ -400,7 +400,7 @@ const Portfolio = () => {
                   </div>
                 </div>
 
-                {/* Trades Table */}
+                {}
                 <div className="bg-white dark:bg-[#211A1A] rounded-2xl shadow-lg border border-landing-primary/10 overflow-hidden">
                   <div className="p-5 border-b border-landing-primary/10">
                     <h2 className="text-lg font-bold text-landing-text dark:text-white">Trade History</h2>

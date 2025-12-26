@@ -24,28 +24,26 @@ const Navbar = () => {
   return (
     <div className="fixed top-0 left-0 right-0 z-50 flex justify-center px-4 pt-6">
       <nav className="w-full max-w-7xl bg-white/80 dark:bg-[#1C1313]/80 backdrop-blur-xl rounded-2xl p-4 shadow-sm border border-landing-primary/5 flex items-center justify-between transition-all duration-300 hover:shadow-md hover:shadow-landing-primary/5">
-        
-        {/* Branding */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-gradient-to-br from-landing-primary to-landing-primary-dark text-white font-bold text-lg shadow-lg shadow-landing-primary/20">
-            N
-          </div>
+
+        {}
+        <Link to={'/'} className="flex items-center gap-3">
+          <img
+            src="/logo.png"
+            alt="Logo"
+            className="h-14 w-14 rounded-full object-cover shadow-sm hover:scale-105 transition-transform duration-300"
+          />
           <div className="flex flex-col">
             <h1 className="text-xl font-display font-bold text-landing-text dark:text-white tracking-tight leading-none">
-              Nifty 50 <span className="text-landing-primary">Trader</span>
+              NIX<span className="text-landing-primary">.ai</span>
             </h1>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-landing-muted mt-1">AI Powered</p>
+
           </div>
-        </div>
+        </Link>
 
-        {/* Links (Hidden on mobile) */}
-        <div className="hidden md:flex items-center gap-10">
-          <a href="#" className="text-sm font-medium text-landing-muted hover:text-landing-primary transition-colors">Features</a>
-          <a href="#" className="text-sm font-medium text-landing-muted hover:text-landing-primary transition-colors">Performance</a>
-          <a href="#" className="text-sm font-medium text-landing-muted hover:text-landing-primary transition-colors">Pricing</a>
-        </div>
+        {}
 
-        {/* Actions */}
+
+        {}
         <div className="flex items-center gap-4">
           {isAuthenticated ? (
             <UserMenu />

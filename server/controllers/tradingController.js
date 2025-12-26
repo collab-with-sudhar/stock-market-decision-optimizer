@@ -4,10 +4,11 @@ import Position from "../models/Position.js";
 import Trade from "../models/Trade.js";
 import catchAsyncErrors from "../middlewares/catchAsyncErrors.js";
 import ErrorHandler from "../utils/errorhander.js";
+import { isMarketOpen } from "../utils/marketSchedule.js";
 
-// @desc    Get user's paper trading account
-// @route   GET /api/trading/account
-// @access  Private
+
+
+
 export const getAccount = catchAsyncErrors(async (req, res, next) => {
   const account = await Account.findOne({ userId: req.user.id });
 
@@ -26,13 +27,18 @@ export const getAccount = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-// @desc    Create a new order (Buy/Sell)
-// @route   POST /api/trading/orders
-// @access  Private
+
+
+
 export const createOrder = catchAsyncErrors(async (req, res, next) => {
   const { symbol, side, quantity, price, orderType = "MARKET" } = req.body;
 
-  // Validate inputs
+  
+  if (!isMarketOpen()) {
+    return next(new ErrorHandler("Market is closed. Trades are not allowed outside market hours/holidays.", 400));
+  }
+
+  
   if (!symbol || !side || !quantity || !price) {
     return next(new ErrorHandler("Please provide all required fields: symbol, side, quantity, price", 400));
   }
@@ -49,18 +55,18 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Price must be a positive number", 400));
   }
 
-  // Get user's account
+  
   const account = await Account.findOne({ userId: req.user.id });
   if (!account) {
     return next(new ErrorHandler("Account not found", 404));
   }
 
   const totalCost = quantity * price;
-  const brokerage = 0; // 0% brokerage for learning system
+  const brokerage = 0; 
 
-  // Validate BUY orders
+  
   if (side === "BUY") {
-    const requiredAmount = totalCost; // No brokerage
+    const requiredAmount = totalCost; 
     if (account.balance < requiredAmount) {
       return next(
         new ErrorHandler(
@@ -76,7 +82,7 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
     }
   }
 
-  // Validate SELL orders
+  
   if (side === "SELL") {
     const holding = account.holdings.find((h) => h.symbol === symbol);
     if (!holding || holding.quantity < quantity) {
@@ -93,10 +99,10 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
     }
   }
 
-  // Generate unique order ID
+  
   const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-  // Create order
+  
   const order = await Order.create({
     userId: req.user.id,
     orderId,
@@ -105,17 +111,17 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
     quantity,
     price,
     orderType,
-    status: "FILLED", // Auto-fill for paper trading
+    status: "FILLED", 
     filledAt: Date.now(),
   });
 
-  // Process order and update account
+  
   if (side === "BUY") {
-    // Deduct cash (no brokerage)
+    
     account.balance -= totalCost;
     account.totalInvested += totalCost;
 
-    // Update or create holding
+    
     const holdingIndex = account.holdings.findIndex((h) => h.symbol === symbol);
     if (holdingIndex > -1) {
       const holding = account.holdings[holdingIndex];
@@ -136,19 +142,19 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
       });
     }
 
-    // Update Position collection
+    
     await Position.findOneAndUpdate(
       { userId: req.user.id, symbol },
       {
         $inc: { qty: quantity },
-        $set: { 
+        $set: {
           updatedAt: Date.now(),
           currentPrice: price
         },
       },
       { upsert: true, new: true }
     ).then(async (position) => {
-      // Recalculate avgPrice
+      
       const buyOrders = await Order.find({
         userId: req.user.id,
         symbol,
@@ -165,7 +171,7 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
       await position.save();
     });
 
-    // Create OPEN trade for BUY order
+    
     const tradeId = `TRD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     await Trade.create({
       userId: req.user.id,
@@ -181,7 +187,7 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
     });
 
   } else if (side === "SELL") {
-    // Close OPEN BUY trades in FIFO order to match quantity
+    
     let remainingQty = quantity;
     const openTrades = await Trade.find({
       userId: req.user.id,
@@ -196,7 +202,7 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
       const closeQty = Math.min(remainingQty, trade.entryQuantity);
 
       if (closeQty === trade.entryQuantity) {
-        // Close entire trade
+        
         trade.exitOrderId = orderId;
         trade.exitSide = 'SELL';
         trade.exitQuantity = closeQty;
@@ -209,7 +215,7 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
         await trade.save();
         account.totalPnL += trade.netPnL;
       } else {
-        // Partial close: create a closed trade for the closed portion
+        
         const partialTradeId = `TRD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
         const closedPortion = await Trade.create({
           userId: req.user.id,
@@ -234,7 +240,7 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
         await closedPortion.save();
         account.totalPnL += closedPortion.netPnL;
 
-        // Reduce remaining quantity on the original open trade
+        
         trade.entryQuantity = trade.entryQuantity - closeQty;
         await trade.save();
       }
@@ -242,28 +248,28 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
       remainingQty -= closeQty;
     }
 
-    // Add cash (no brokerage) for the sold quantity
+    
     account.balance += (quantity * price);
 
-    // Update holding
+    
     const holdingIndex = account.holdings.findIndex((h) => h.symbol === symbol);
     if (holdingIndex > -1) {
       account.holdings[holdingIndex].quantity -= quantity;
       account.holdings[holdingIndex].currentPrice = price;
       account.holdings[holdingIndex].updatedAt = Date.now();
 
-      // Calculate P&L for this partial sell
+      
       const pnl = (price - account.holdings[holdingIndex].avgPrice) * quantity;
       account.holdings[holdingIndex].pnl = pnl;
       account.holdings[holdingIndex].pnlPercent = (pnl / (account.holdings[holdingIndex].avgPrice * quantity)) * 100;
 
-      // Remove holding if quantity is 0
+      
       if (account.holdings[holdingIndex].quantity === 0) {
         account.holdings.splice(holdingIndex, 1);
       }
     }
 
-    // Update Position collection
+    
     const position = await Position.findOne({ userId: req.user.id, symbol });
     if (position) {
       position.qty -= quantity;
@@ -302,9 +308,9 @@ export const createOrder = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-// @desc    Get user's orders
-// @route   GET /api/trading/orders
-// @access  Private
+
+
+
 export const getOrders = catchAsyncErrors(async (req, res, next) => {
   const { limit = 20, status } = req.query;
 
@@ -324,9 +330,9 @@ export const getOrders = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-// @desc    Get user's positions
-// @route   GET /api/trading/positions
-// @access  Private
+
+
+
 export const getPositions = catchAsyncErrors(async (req, res, next) => {
   const positions = await Position.find({ userId: req.user.id, qty: { $gt: 0 } });
 
@@ -337,9 +343,9 @@ export const getPositions = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-// @desc    Get portfolio stats and holdings
-// @route   GET /api/trading/portfolio
-// @access  Private
+
+
+
 export const getPortfolio = catchAsyncErrors(async (req, res, next) => {
   const account = await Account.findOne({ userId: req.user.id });
 
@@ -360,9 +366,9 @@ export const getPortfolio = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-// @desc    Reset paper trading account
-// @route   POST /api/trading/account/reset
-// @access  Private
+
+
+
 export const resetAccount = catchAsyncErrors(async (req, res, next) => {
   const account = await Account.findOne({ userId: req.user.id });
 
@@ -370,14 +376,14 @@ export const resetAccount = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Account not found", 404));
   }
 
-  // Reset account to initial state
+  
   account.balance = account.initialBalance;
   account.totalInvested = 0;
   account.totalPnL = 0;
   account.holdings = [];
   await account.save();
 
-  // Clear positions and trades
+  
   await Position.deleteMany({ userId: req.user.id });
   await Trade.deleteMany({ userId: req.user.id });
 
@@ -393,9 +399,12 @@ export const resetAccount = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-// @desc    Get comprehensive portfolio summary with metrics
-// @route   GET /api/trading/portfolio/summary
-// @access  Private
+
+
+
+
+
+
 export const getPortfolioSummary = catchAsyncErrors(async (req, res, next) => {
   const account = await Account.findOne({ userId: req.user.id });
   if (!account) {
@@ -406,53 +415,102 @@ export const getPortfolioSummary = catchAsyncErrors(async (req, res, next) => {
   const allTrades = await Trade.find({ userId: req.user.id });
   const closedTrades = await Trade.find({ userId: req.user.id, status: 'CLOSED' });
 
-  // Live portfolio value (open positions)
+  
+  
   const portfolioValue = positions.reduce((sum, pos) => sum + (pos.currentPrice * pos.qty), 0);
+
+  
   const cashInvested = positions.reduce((sum, pos) => sum + (pos.avgPrice * pos.qty), 0);
-  const unrealizedPnL = positions.reduce((sum, pos) => sum + ((pos.currentPrice - pos.avgPrice) * pos.qty), 0);
+
+  
+  const unrealizedPnL = positions.reduce((sum, pos) => {
+    
+    const current = pos.currentPrice || 0;
+    const avg = pos.avgPrice || 0;
+    return sum + ((current - avg) * pos.qty);
+  }, 0);
+
   const unrealizedPnLPercent = cashInvested > 0 ? (unrealizedPnL / cashInvested) * 100 : 0;
 
-  // Closed trades metrics
-  const sumWins = closedTrades.filter(t => t.netPnL > 0).reduce((s, t) => s + t.netPnL, 0);
-  const sumLosses = closedTrades.filter(t => t.netPnL < 0).reduce((s, t) => s + t.netPnL, 0); // negative sum
-  const winningTrades = closedTrades.filter(t => t.netPnL > 0).length;
-  const losingTrades = closedTrades.filter(t => t.netPnL < 0).length;
-  const realizedPnL = closedTrades.reduce((sum, trade) => sum + trade.netPnL, 0);
-  const avgWin = winningTrades > 0 ? (sumWins / winningTrades) : 0;
-  const avgLoss = losingTrades > 0 ? (sumLosses / losingTrades) : 0; // negative value
-  const profitFactor = Math.abs(sumLosses) > 0 ? (sumWins / Math.abs(sumLosses)) : 0;
-  const winRate = (winningTrades + losingTrades) > 0 ? (winningTrades / (winningTrades + losingTrades)) * 100 : 0;
+  
+  let sumWins = 0;
+  let sumLosses = 0;
+  let winningTrades = 0;
+  let losingTrades = 0;
+  let totalRealizedPnL = 0;
+  let totalTradeInvested = 0; 
 
-  // Totals & returns
-  const totalPnL = unrealizedPnL + realizedPnL;
+  closedTrades.forEach(trade => {
+    
+    const netPnL = trade.netPnL || 0;
+    const entryTotal = (trade.entryPrice * trade.entryQuantity) || 0;
+
+    totalRealizedPnL += netPnL;
+    totalTradeInvested += entryTotal;
+
+    if (netPnL > 0) {
+      sumWins += netPnL;
+      winningTrades++;
+    } else if (netPnL < 0) {
+      sumLosses += netPnL; 
+      losingTrades++;
+    }
+  });
+
+  const avgWin = winningTrades > 0 ? (sumWins / winningTrades) : 0;
+  const avgLoss = losingTrades > 0 ? (sumLosses / losingTrades) : 0;
+  
+  const absLosses = Math.abs(sumLosses);
+  const profitFactor = absLosses > 0 ? (sumWins / absLosses) : (sumWins > 0 ? 999 : 0); 
+
+  const totalClosed = winningTrades + losingTrades;
+  const winRate = totalClosed > 0 ? (winningTrades / totalClosed) * 100 : 0;
+
+  
+  const totalPnL = unrealizedPnL + totalRealizedPnL;
   const totalBalance = account.balance + portfolioValue;
-  const portfolioReturnPercent = account.initialBalance > 0 ? ((totalBalance - account.initialBalance) / account.initialBalance) * 100 : 0;
-  const tradeInvested = closedTrades.reduce((sum, t) => sum + (t.entryPrice * (t.exitQuantity || t.entryQuantity)), 0);
-  const tradeReturnPercent = tradeInvested > 0 ? (realizedPnL / tradeInvested) * 100 : 0;
+
+  
+  const portfolioReturnPercent = account.initialBalance > 0
+    ? ((totalBalance - account.initialBalance) / account.initialBalance) * 100
+    : 0;
+
+  
+  
+  const sumTradeROIs = closedTrades.reduce((sum, t) => {
+    const entryVal = t.entryPrice * t.entryQuantity;
+    if (entryVal <= 0) return sum; 
+    return sum + ((t.netPnL / entryVal) * 100);
+  }, 0);
+
+  const avgTradeROI = totalClosed > 0 ? (sumTradeROIs / totalClosed) : 0;
+
+  
+  
 
   res.status(200).json({
     success: true,
     summary: {
-      // Account levels
+      
       initialBalance: account.initialBalance.toFixed(2),
       currentBalance: account.balance.toFixed(2),
       totalBalance: totalBalance.toFixed(2),
 
-      // Portfolio metrics
+      
       portfolioValue: portfolioValue.toFixed(2),
       cashInvested: cashInvested.toFixed(2),
 
-      // P&L metrics
+      
       unrealizedPnL: unrealizedPnL.toFixed(2),
       unrealizedPnLPercent: unrealizedPnLPercent.toFixed(2),
-      realizedPnL: realizedPnL.toFixed(2),
+      realizedPnL: totalRealizedPnL.toFixed(2),
       totalPnL: totalPnL.toFixed(2),
 
-      // Returns
+      
       totalReturn: portfolioReturnPercent.toFixed(2),
-      tradeReturnPercent: tradeReturnPercent.toFixed(2),
+      tradeReturnPercent: avgTradeROI.toFixed(2), 
 
-      // Trade statistics
+      
       totalTrades: allTrades.length,
       closedTrades: closedTrades.length,
       openTrades: allTrades.length - closedTrades.length,
@@ -460,12 +518,12 @@ export const getPortfolioSummary = catchAsyncErrors(async (req, res, next) => {
       losingTrades,
       winRate: winRate.toFixed(2),
 
-      // Trade metrics
+      
       avgWin: avgWin.toFixed(2),
       avgLoss: avgLoss.toFixed(2),
       profitFactor: profitFactor.toFixed(2),
 
-      // Holdings
+      
       positions: positions.map(p => ({
         symbol: p.symbol,
         quantity: p.qty,
@@ -479,9 +537,9 @@ export const getPortfolioSummary = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-// @desc    Get trade history
-// @route   GET /api/trading/trades
-// @access  Private
+
+
+
 export const getTradeHistory = catchAsyncErrors(async (req, res, next) => {
   const { limit = 50, status = 'CLOSED', symbol } = req.query;
 

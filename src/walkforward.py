@@ -1,4 +1,4 @@
-# src/walkforward.py
+
 """
 Walk-forward evaluation for trading RL models.
 Trains PPO on rolling windows and evaluates out-of-sample performance.
@@ -29,10 +29,7 @@ parser.add_argument("--model-out-dir", type=str, default="models/walk")
 parser.add_argument("--tmp-train", type=str, default="data/tmp_train_slice.csv")
 parser.add_argument("--tmp-test", type=str, default="data/tmp_test_slice.csv")
 
-args = parser.parse_args()
-
-
-# Load full dataset
+args = parser.parse_args()
 csv_path = Path(args.csv)
 assert csv_path.exists(), f"CSV not found: {csv_path}"
 
@@ -60,13 +57,9 @@ while True:
 
     if test_end > n:
         print("Reached end of dataset. Stopping walk-forward analysis.")
-        break
-
-    # Slice data
+        break
     train_df = df.iloc[train_start:train_end].reset_index(drop=True)
-    test_df = df.iloc[test_start:test_end].reset_index(drop=True)
-
-    # Save temp slices
+    test_df = df.iloc[test_start:test_end].reset_index(drop=True)
     train_slice_path = Path(args.tmp_train)
     test_slice_path = Path(args.tmp_test)
 
@@ -77,9 +70,7 @@ while True:
 
     print("\n==============================")
     print(f"Training slice {train_start} → {train_end}")
-    print("==============================")
-
-    # Train PPO on this slice
+    print("==============================")
     train_cmd = [
         "python", "-m", "src.train_ppo",
         "--csv", str(train_slice_path),
@@ -90,18 +81,14 @@ while True:
 
     print("------------------------------")
     print(f"Evaluating test slice {test_start} → {test_end}")
-    print("------------------------------")
-
-    # Evaluate on test slice
+    print("------------------------------")
     eval_cmd = [
         "python", "-m", "src.evaluate_ppo",
         "--model", f"{model_name}.zip",
         "--csv", str(test_slice_path),
         "--window", "20"
     ]
-    run(eval_cmd)
-
-    # Move forward
+    run(eval_cmd)
     start += step
 
 print("\nWalk-forward evaluation complete!")

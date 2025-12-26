@@ -1,4 +1,4 @@
-# realtime/find_nifty_token.py
+
 """
 Helper script to find the correct NIFTY 50 index token from SmartAPI.
 SmartAPI provides a symbol master file that contains all valid tokens.
@@ -22,9 +22,7 @@ def find_nifty_token():
     print("=" * 80)
     print("FINDING CORRECT NIFTY 50 TOKEN FROM SMARTAPI")
     print("=" * 80)
-    print()
-    
-    # Login to SmartAPI
+    print()
     print("📱 Logging in to SmartAPI...")
     try:
         smart = SmartConnect(api_key=SMARTAPI_API_KEY)
@@ -39,22 +37,15 @@ def find_nifty_token():
         print()
     except Exception as e:
         print(f"❌ Login exception: {e}")
-        return
-    
-    # SmartAPI provides several ways to get symbol info:
-    # 1. searchScrip - Search for a specific symbol
-    # 2. Download symbol master CSV file
+        return
     
     print("🔍 Searching for NIFTY 50 index...")
-    print()
-    
-    # Try different search terms
+    print()
     search_terms = ["NIFTY 50", "NIFTY", "NIFTY50", "Nifty 50"]
     
     for term in search_terms:
         print(f"Searching for: '{term}'")
-        try:
-            # Try searchScrip if available
+        try:
             if hasattr(smart, 'searchScrip'):
                 result = smart.searchScrip(term)
                 print(f"  Result: {json.dumps(result, indent=2)}")
@@ -66,9 +57,7 @@ def find_nifty_token():
     
     print("-" * 80)
     print("COMMON NIFTY INDEX TOKENS (from Angel One documentation):")
-    print("-" * 80)
-    
-    # Based on Angel One's official documentation, here are common index tokens:
+    print("-" * 80)
     known_tokens = {
         "NIFTY 50": {
             "token": "99926000",  # Official NIFTY 50 index token
@@ -106,9 +95,7 @@ def find_nifty_token():
     print("=" * 80)
     print("TESTING NIFTY 50 TOKEN: 99926000")
     print("=" * 80)
-    print()
-    
-    # Test the NIFTY 50 token
+    print()
     token = "99926000"
     exchange_type = 1  # NSE
     
@@ -141,13 +128,9 @@ def find_nifty_token():
             
             if candles:
                 print(f"\n  First candle: {candles[0]}")
-                print(f"  Last candle: {candles[-1]}")
-                
-                # Parse and show prices
+                print(f"  Last candle: {candles[-1]}")
                 last_candle = candles[-1]
-                ts, o, h, l, c = last_candle[0], last_candle[1], last_candle[2], last_candle[3], last_candle[4]
-                
-                # Check if in paise
+                ts, o, h, l, c = last_candle[0], last_candle[1], last_candle[2], last_candle[3], last_candle[4]
                 if float(c) > 100000:
                     c_rupees = float(c) / 100
                     print(f"\n  Latest close: {c} paise = ₹{c_rupees:.2f}")

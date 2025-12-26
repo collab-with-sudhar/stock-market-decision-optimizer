@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import UserMenu from './UserMenu.jsx';
+import { Link } from 'react-router-dom';
 
 const Topbar = () => {
   const { user } = useSelector((state) => state.auth);
@@ -26,21 +27,19 @@ const Topbar = () => {
 
   return (
     <header className="w-full flex flex-col md:flex-row justify-between items-center gap-4 bg-white/80 dark:bg-[#1C1313]/80 backdrop-blur-xl rounded-2xl p-4 shadow-sm border border-landing-primary/5 transition-all duration-300 hover:shadow-md hover:shadow-landing-primary/5">
-      
-      {/* Left Side: Branding */}
-      <div className="hidden md:flex items-center gap-3">
-        <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-gradient-to-br from-landing-primary to-landing-primary-dark text-white font-bold text-lg shadow-lg shadow-landing-primary/20">
-          N
-        </div>
+
+      {}
+      <Link to={'/'} className="hidden md:flex items-center gap-3">
+        
         <div className="flex flex-col">
           <h1 className="text-xl font-display font-bold text-landing-text dark:text-white tracking-tight leading-none">
-            Nifty 50 <span className="text-landing-primary">Trader</span>
+            NIX<span className="text-landing-primary">.ai</span>
           </h1>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-landing-muted mt-1">AI Powered</p>
+          {}
         </div>
-      </div>
-      
-      {/* Right Side: Actions */}
+      </Link>
+
+      {}
       <div className="flex items-center gap-3 md:gap-4 self-end md:self-auto ml-auto md:ml-0">
         <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-[#211A1A] border border-landing-primary/10 shadow-sm">
           <span className="relative flex h-2 w-2">
@@ -51,7 +50,7 @@ const Topbar = () => {
             {marketOpen ? 'Market Open' : 'Market Closed'}
           </span>
         </div>
-        
+
         <UserMenu />
       </div>
     </header>

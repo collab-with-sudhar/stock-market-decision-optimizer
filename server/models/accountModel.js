@@ -15,7 +15,7 @@ const accountSchema = new mongoose.Schema({
   },
   balance: {
     type: Number,
-    default: 100000, // Default ₹1,00,000 for paper trading
+    default: 100000, 
     required: true,
   },
   initialBalance: {
@@ -56,13 +56,13 @@ const accountSchema = new mongoose.Schema({
   },
 });
 
-// Update timestamp on save
+
 accountSchema.pre("save", function (next) {
   this.updatedAt = Date.now();
   next();
 });
 
-// Calculate total PnL and portfolio value
+
 accountSchema.methods.calculatePortfolioValue = function () {
   let holdingsValue = 0;
   let totalPnL = 0;

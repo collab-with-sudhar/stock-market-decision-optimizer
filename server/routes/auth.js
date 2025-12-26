@@ -20,7 +20,7 @@ router.put('/auth/profile', isAuthenticatedUser, updateProfile);
 router.post("/auth/password/forgot", forgotPassword);
 router.put("/auth/password/reset/:token", resetPassword);
 
-// Protected routes for admin
+
 router.get("/admin", isAuthenticatedUser, authorizeRoles("admin"), (req, res) => {
   res.json({ success: true, message: "Admin Route Access Granted" });
 });

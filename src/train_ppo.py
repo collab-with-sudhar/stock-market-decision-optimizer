@@ -1,4 +1,4 @@
-# src/train_ppo.py
+
 import argparse
 from pathlib import Path
 import pandas as pd
@@ -31,21 +31,15 @@ parser.add_argument('--slippage', type=float, default=0.0005)
 parser.add_argument('--trade-penalty', type=float, default=0.0002)
 parser.add_argument('--risk-aversion', type=float, default=0.0)
 parser.add_argument('--eval-interval', type=int, default=10000)
-args = parser.parse_args()
-
-# paths
+args = parser.parse_args()
 model_out = Path(args.model_out)
-model_out.parent.mkdir(parents=True, exist_ok=True)
-
-# load data
+model_out.parent.mkdir(parents=True, exist_ok=True)
 if args.csv:
     csv_path = Path(args.csv)
     df = pd.read_csv(csv_path)
 else:
     csv_path = Path(f"data/raw/{args.ticker.replace('/','_')}.csv")
-    df = download_if_missing(args.ticker, csv_path)
-
-# env
+    df = download_if_missing(args.ticker, csv_path)
 def make_env():
     return TradingEnvImproved(df,
                               window_size=args.window,
@@ -55,23 +49,15 @@ def make_env():
                               risk_aversion=args.risk_aversion,
                               reward_norm=True)
 
-env = DummyVecEnv([make_env])
-# optional normalization wrapper
-env = VecNormalize(env, norm_obs=True, norm_reward=False)
-
-# model
+env = DummyVecEnv([make_env])
+env = VecNormalize(env, norm_obs=True, norm_reward=False)
 policy_kwargs = dict(net_arch=[dict(pi=[256,128], vf=[256,128])])
-model = PPO("MlpPolicy", env, verbose=1, policy_kwargs=policy_kwargs, tensorboard_log="tensorboard/ppo")
-
-# callbacks
-# callbacks
+model = PPO("MlpPolicy", env, verbose=1, policy_kwargs=policy_kwargs, tensorboard_log="tensorboard/ppo")
 checkpoint_callback = CheckpointCallback(
     save_freq=5000, 
     save_path=model_out.parent, 
     name_prefix="ppo_model"
-)
-
-# evaluation environment MUST match training wrappers
+)
 eval_env = DummyVecEnv([make_env])
 eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, training=False)
 
@@ -82,8 +68,7 @@ eval_callback = EvalCallback(
     eval_freq=args.eval_interval,
     deterministic=True,
     render=False
-)
-# train
+)
 model.learn(total_timesteps=args.timesteps, callback=[checkpoint_callback, eval_callback])
 model.save(str(model_out))
 print("Saved PPO model to", model_out)

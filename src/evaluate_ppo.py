@@ -22,12 +22,7 @@ def build_env(df, window):
             risk_aversion=0.0,
             reward_norm=True
         )
-    return DummyVecEnv([make])
-
-
-# ===============================
-# Command line
-# ===============================
+    return DummyVecEnv([make])
 parser = argparse.ArgumentParser()
 parser.add_argument("--model", type=str, required=True)
 parser.add_argument("--csv", type=str, required=True)
@@ -39,35 +34,21 @@ args = parser.parse_args()
 MODEL = Path(args.model)
 CSV = Path(args.csv)
 PLOTS = Path(args.plots_dir)
-PLOTS.mkdir(parents=True, exist_ok=True)
+PLOTS.mkdir(parents=True, exist_ok=True)
+df = pd.read_csv(CSV)
+df.rename(columns={c: c.capitalize() for c in df.columns}, inplace=True)
 
-
-# ===============================
-# Load data
-# ===============================
-df = pd.read_csv(CSV)
 if "Date" in df.columns:
-    df["Date"] = pd.to_datetime(df["Date"])
-
-# Build environment
-eval_env = build_env(df, args.window)
-
-# If VecNormalize stats exist, load them
+    df["Date"] = pd.to_datetime(df["Date"])
+eval_env = build_env(df, args.window)
 if args.norm:
     if Path(args.norm).exists():
         eval_env = VecNormalize.load(args.norm, eval_env)
         eval_env.training = False
         eval_env.norm_reward = False
     else:
-        print(f"[WARNING] Norm file {args.norm} not found. Skipping normalization.")
-
-# Load PPO model
-model = PPO.load(str(MODEL), env=eval_env)
-
-
-# ===============================
-# Run evaluation
-# ===============================
+        print(f"[WARNING] Norm file {args.norm} not found. Skipping normalization.")
+model = PPO.load(str(MODEL), env=eval_env)
 obs = eval_env.reset()
 records = []
 step = 0
@@ -99,19 +80,9 @@ while True:
 
     step += 1
     if done or step > len(df):
-        break
-
-
-# ===============================
-# Convert to dataframe
-# ===============================
+        break
 results = pd.DataFrame(records)
-results.to_csv(PLOTS / "ppo_evaluation_results.csv", index=False)
-
-
-# ===============================
-# Metrics
-# ===============================
+results.to_csv(PLOTS / "ppo_evaluation_results.csv", index=False)
 results["portfolio"] = pd.to_numeric(results["portfolio"], errors="coerce")
 results = results.dropna(subset=["portfolio"]).reset_index(drop=True)
 
@@ -132,13 +103,7 @@ pd.DataFrame([{
     "annual_return": annual_return,
     "sharpe": sharpe,
     "max_drawdown": mdd
-}]).to_csv(PLOTS / "ppo_metrics_summary.csv", index=False)
-
-
-# ===============================
-# Plots
-# ===============================
-# Equity curve
+}]).to_csv(PLOTS / "ppo_metrics_summary.csv", index=False)
 plt.figure(figsize=(10, 5))
 x = results["date"] if results["date"].notna().any() else results["env_step"]
 plt.plot(x, results["portfolio"])
@@ -146,9 +111,7 @@ plt.title("PPO Equity Curve")
 plt.grid(True)
 plt.tight_layout()
 plt.savefig(PLOTS / "ppo_equity_curve.png")
-plt.close()
-
-# Price with buy/sell
+plt.close()
 plt.figure(figsize=(12, 5))
 plt.plot(x, results["price"])
 buys = results[results["action"] == 1]

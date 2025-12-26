@@ -32,11 +32,11 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
     loginMethod: "email_password"
   });
 
-  // Auto-create paper trading account with default balance
+  
   const paperAccount = await Account.create({
     userId: user._id,
     accountType: "paper",
-    balance: 100000, // Default ₹1,00,000
+    balance: 100000, 
     initialBalance: 100000,
     totalInvested: 0,
     totalPnL: 0,
@@ -44,7 +44,7 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
     isActive: true,
   });
 
-  // Link paper account to user
+  
   user.paperAccount = paperAccount._id;
   await user.save();
 
@@ -144,12 +144,12 @@ export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
   const message = `Your password reset token is :- \n\n ${resetUrl} \n\nIf you have not requested this email then, please ignore it.`;
 
   try {
-    // Email sending would go here
-    // For now, just return success
+    
+    
     res.status(200).json({
       success: true,
       message: "Email sent to your email address",
-      resetToken, // Remove in production
+      resetToken, 
     });
   } catch (error) {
     user.resetPasswordToken = undefined;

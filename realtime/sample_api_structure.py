@@ -1,16 +1,13 @@
-# Quick test to verify SmartAPI candle data structure
-import datetime
-import json
 
-# Mock what SmartAPI getCandleData returns
+import datetime
+import json
 sample_response = {
     "status": True,
     "message": "SUCCESS",
     "data": [
         ["2025-12-24 09:15", 2345050, 2346000, 2344500, 2345500, 15000],
         ["2025-12-24 09:16", 2345500, 2347000, 2345000, 2346200, 18000],
-        ["2025-12-24 09:17", 2346200, 2348500, 2346000, 2347800, 22000],
-        # ... more candles
+        ["2025-12-24 09:17", 2346200, 2348500, 2346000, 2347800, 22000],
     ]
 }
 

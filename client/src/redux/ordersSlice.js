@@ -11,7 +11,7 @@ const ordersSlice = createSlice({
   name: 'orders',
   initialState,
   reducers: {
-    // Fetch orders
+    
     fetchOrdersStart: (state) => {
       state.loading = true;
       state.error = null;
@@ -25,7 +25,7 @@ const ordersSlice = createSlice({
       state.error = action.payload;
     },
 
-    // Create order
+    
     createOrderStart: (state) => {
       state.loading = true;
       state.error = null;
@@ -40,12 +40,12 @@ const ordersSlice = createSlice({
       state.error = action.payload;
     },
 
-    // Clear error
+    
     clearError: (state) => {
       state.error = null;
     },
 
-    // Clear last order
+    
     clearLastOrder: (state) => {
       state.lastOrder = null;
     },

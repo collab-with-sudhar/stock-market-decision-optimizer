@@ -1,4 +1,4 @@
-# realtime/test_candle_fetch.py
+
 """
 Simple test to verify SmartAPI getCandleData returns real historical data
 """
@@ -10,9 +10,7 @@ def test_candle_fetch():
     print("=" * 80)
     print("TESTING SMARTAPI HISTORICAL CANDLE FETCH")
     print("=" * 80)
-    print()
-    
-    # Import SmartAPI components
+    print()
     try:
         import pyotp
         from SmartApi import SmartConnect
@@ -26,9 +24,7 @@ def test_candle_fetch():
         print(f"❌ Import error: {e}")
         print("Make sure all dependencies are installed:")
         print("  pip install smartapi-python pyotp")
-        return
-    
-    # Login
+        return
     print("📱 Logging in to SmartAPI...")
     try:
         smart = SmartConnect(api_key=SMARTAPI_API_KEY)
@@ -43,20 +39,14 @@ def test_candle_fetch():
         print()
     except Exception as e:
         print(f"❌ Login exception: {e}")
-        return
-    
-    # Test each symbol
+        return
     for symbol, (exchange_type, token) in SYMBOL_TOKEN_MAP.items():
         print("-" * 80)
         print(f"📊 Testing: {symbol}")
-        print(f"   Exchange Type: {exchange_type}, Token: {token}")
-        
-        # Determine exchange name
+        print(f"   Exchange Type: {exchange_type}, Token: {token}")
         exchange_map = {1: "NSE", 2: "NFO", 3: "BSE"}
         exchange = exchange_map.get(int(exchange_type), "NSE")
-        print(f"   Exchange: {exchange}")
-        
-        # Calculate time range
+        print(f"   Exchange: {exchange}")
         now = datetime.datetime.now()
         end = now
         start = end - datetime.timedelta(minutes=WINDOW_SIZE + 10)
@@ -65,9 +55,7 @@ def test_candle_fetch():
         print(f"     From: {start.strftime('%Y-%m-%d %H:%M')}")
         print(f"     To:   {end.strftime('%Y-%m-%d %H:%M')}")
         print(f"     Duration: {WINDOW_SIZE + 10} minutes")
-        print()
-        
-        # Make API call
+        print()
         params = {
             "exchange": exchange,
             "symboltoken": str(token),
@@ -81,9 +69,7 @@ def test_candle_fetch():
         print()
         
         try:
-            response = smart.getCandleData(params)
-            
-            # Check response
+            response = smart.getCandleData(params)
             if not response:
                 print(f"   ❌ No response received")
                 print()
@@ -97,9 +83,7 @@ def test_candle_fetch():
                 print(f"   ❌ Request failed")
                 print(f"   Full response: {json.dumps(response, indent=6)}")
                 print()
-                continue
-            
-            # Parse data
+                continue
             data = response.get("data", [])
             print(f"   ✅ Candles received: {len(data)}")
             print()
@@ -107,13 +91,10 @@ def test_candle_fetch():
             if not data:
                 print(f"   ⚠️  No candles in response (market may be closed)")
                 print()
-                continue
-            
-            # Show first and last candles
+                continue
             print(f"   📈 First 3 candles:")
             for i, candle in enumerate(data[:3]):
-                ts, o, h, l, c = candle[0], candle[1], candle[2], candle[3], candle[4]
-                # Convert from paise if needed
+                ts, o, h, l, c = candle[0], candle[1], candle[2], candle[3], candle[4]
                 if float(c) > 100000:
                     o, h, l, c = float(o)/100, float(h)/100, float(l)/100, float(c)/100
                     unit = " (converted from paise)"
@@ -137,11 +118,8 @@ def test_candle_fetch():
                     unit = ""
                 print(f"      [{idx}] {ts} | O:{o:8.2f} H:{h:8.2f} L:{l:8.2f} C:{c:8.2f}{unit}")
             
-            print()
-            
-            # Analyze close prices
-            closes = [float(c[4]) for c in data]
-            # Convert from paise if needed
+            print()
+            closes = [float(c[4]) for c in data]
             if closes[0] > 100000:
                 closes = [c/100 for c in closes]
             
@@ -156,15 +134,11 @@ def test_candle_fetch():
             print(f"      Max Close:  ₹{max_close:,.2f}")
             print(f"      Avg Close:  ₹{avg_close:,.2f}")
             print(f"      Latest:     ₹{closes[-1]:,.2f}")
-            print(f"      Variation:  ₹{variation:,.2f} ({variation_pct:.2f}%)")
-            
-            # Verify real data
+            print(f"      Variation:  ₹{variation:,.2f} ({variation_pct:.2f}%)")
             if variation_pct > 0.01:
                 print(f"      ✅ REAL MARKET DATA (prices are varying)")
             else:
-                print(f"      ⚠️  FLAT DATA (may be outside trading hours)")
-            
-            # Check if enough for model
+                print(f"      ⚠️  FLAT DATA (may be outside trading hours)")
             last_21 = data[-21:] if len(data) >= 21 else data
             print()
             print(f"   🤖 Model Readiness:")

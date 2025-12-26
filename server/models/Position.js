@@ -1,4 +1,4 @@
-// server/models/Position.js
+
 import mongoose from 'mongoose';
 
 const PositionSchema = new mongoose.Schema({
@@ -17,7 +17,7 @@ const PositionSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-// Composite index for user + symbol
+
 PositionSchema.index({ userId: 1, symbol: 1 }, { unique: true });
 
 const Position = mongoose.model('Position', PositionSchema);

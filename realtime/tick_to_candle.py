@@ -1,4 +1,4 @@
-# realtime/tick_to_candle.py
+
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
@@ -26,24 +26,18 @@ class TickToCandle:
 
     Usage:
       agg = TickToCandle(window_minutes=20)
-      agg.add_tick(symbol, last_price, tick_ts_ms)
-      # when a candle closes, agg returns (symbol, candle) from add_tick
+      agg.add_tick(symbol, last_price, tick_ts_ms)
     """
 
     def __init__(self, window_minutes: int = 20):
         self.window_ms = 60_000  # 1 minute in ms
-        self.window_minutes = int(window_minutes)
-        # current open candle per symbol: symbol -> Candle
-        self.current: Dict[str, Candle] = {}
-        # history deque of closed candles per symbol
-        # SPEC: Keep at least 21 candles for model input (with padding if needed)
+        self.window_minutes = int(window_minutes)
+        self.current: Dict[str, Candle] = {}
         self.history: Dict[str, deque] = defaultdict(lambda: deque(maxlen=max(self.window_minutes + 5, 21)))
 
-    def _floor_to_min(self, ts_ms: int) -> int:
-        # returns epoch ms at candle start (minute aligned)
+    def _floor_to_min(self, ts_ms: int) -> int:
         dt = datetime.datetime.utcfromtimestamp(ts_ms / 1000.0)
-        dt = dt.replace(second=0, microsecond=0)
-        # convert back to ms
+        dt = dt.replace(second=0, microsecond=0)
         return int(dt.timestamp() * 1000)
 
     def add_tick(self, symbol: str, price: float, ts_ms: Optional[int] = None) -> Optional[Tuple[str, Candle]]:
@@ -58,34 +52,23 @@ class TickToCandle:
         candle_start = self._floor_to_min(ts_ms)
 
         cur = self.current.get(symbol)
-        if cur is None:
-            # create new candle for this minute
+        if cur is None:
             c = Candle(ts=candle_start, open=price, high=price, low=price, close=price, volume=1.0)
             self.current[symbol] = c
-            return None
-
-        # same minute?
-        if candle_start == cur.ts:
-            # update in-place
+            return None
+        if candle_start == cur.ts:
             cur.high = max(cur.high, price)
             cur.low = min(cur.low, price)
             cur.close = price
             cur.volume += 1.0
             return None
-        else:
-            # minute changed: close previous candle, push to history
-            # IMPORTANT: The 'close' field is the last tick's price from previous minute
-            # But for model input, we want LTP at minute boundary (first tick of new minute)
+        else:
             closed = cur
-            closed.ltp_snapshot = price  # This tick's price = LTP at minute boundary
-            
-            # Create new current candle for this tick's minute
+            closed.ltp_snapshot = price  # This tick's price = LTP at minute boundary
             new_c = Candle(ts=candle_start, open=price, high=price, low=price, close=price, volume=1.0, ltp_snapshot=0.0)
-            self.current[symbol] = new_c
-            # push closed into history
+            self.current[symbol] = new_c
             h = self.history[symbol]
-            h.append(closed)
-            # return closed candle so caller can act (i.e. send signal)
+            h.append(closed)
             return (symbol, closed)
 
     def get_closes(self, symbol: str) -> List[float]:

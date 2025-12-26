@@ -6,7 +6,7 @@ export const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useSelector((state) => state.auth);
   const location = useLocation();
 
-  // Show loading state while checking authentication
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-[#FDF9F9] dark:bg-[#1A1212]">
@@ -19,7 +19,7 @@ export const ProtectedRoute = ({ children }) => {
   }
 
   if (!isAuthenticated) {
-    // Redirect to login with the current location as the intended destination
+    
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 

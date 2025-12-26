@@ -15,7 +15,7 @@ const sendToken = (user, statusCode, res) => {
     .cookie("role", user.role, options)
     .json({
       success: true,
-      // Token is stored in httpOnly cookie, not returned in JSON for security
+      
       role: user.role,
       user: {
         id: user._id,

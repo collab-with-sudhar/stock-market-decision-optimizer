@@ -7,9 +7,7 @@ import numpy as np
 RAW_DIR = Path("data/raw")
 PROCESSED_DIR = Path("data/processed")
 RAW_DIR.mkdir(parents=True, exist_ok=True)
-PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
-
-# Starter NIFTY50 tickers (Yahoo format: <TICKER>.NS)
+PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 NIFTY50_TICKERS = [
     "RELIANCE.NS","TCS.NS","HDFCBANK.NS","INFY.NS","ICICIBANK.NS",
     "KOTAKBANK.NS","HINDUNILVR.NS","SBIN.NS","HDFC.NS","AXISBANK.NS",
@@ -40,11 +38,9 @@ def download_ticker(ticker: str, start: str = "2010-01-01", end: str = None):
 def process_ticker_csv(in_path: Path):
     df = pd.read_csv(in_path)
     if 'Date' in df.columns:
-        df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-    # ensure Close numeric
+        df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
     df['Close'] = pd.to_numeric(df['Close'], errors='coerce')
-    df = df.dropna(subset=['Close']).reset_index(drop=True)
-    # compute basic features
+    df = df.dropna(subset=['Close']).reset_index(drop=True)
     df['ret'] = df['Close'].pct_change().fillna(0)
     df['logret'] = np.log1p(df['ret'])
     df['ma_5'] = df['Close'].rolling(window=5).mean()
@@ -59,8 +55,7 @@ def process_ticker_csv(in_path: Path):
 
 def download_all(tickers=None):
     if tickers is None:
-        tickers = NIFTY50_TICKERS
-    # index
+        tickers = NIFTY50_TICKERS
     download_ticker(INDEX_TICKER)
     for t in tickers:
         try:

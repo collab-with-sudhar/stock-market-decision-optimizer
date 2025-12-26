@@ -1,4 +1,4 @@
-# src/model_inference.py
+
 
 """
 Model inference helper for the PPO trading agent.
@@ -14,10 +14,7 @@ from pathlib import Path
 from typing import List, Union
 
 import numpy as np
-from stable_baselines3 import PPO
-
-# ---- Configuration ----
-# Default model path – you can change this to any of your PPO checkpoints
+from stable_baselines3 import PPO
 DEFAULT_MODEL_PATH = Path("models/best_model.zip")
 
 
@@ -33,9 +30,7 @@ class TradingAgent:
             raise FileNotFoundError(
                 f"Could not find model file at {model_path.resolve()}.\n"
                 f"Make sure you have trained a PPO model and saved it there."
-            )
-
-        # Load PPO model (no env required for pure inference)
+            )
         self.model = PPO.load(str(model_path))
         self.obs_dim = None  # we can set this after first call if you want
 
@@ -48,20 +43,11 @@ class TradingAgent:
 
         obs should be a 1D list/array of floats with length = window + 1.
         """
-        obs_arr = np.array(obs, dtype=np.float32).reshape(1, -1)
-
-        # Optionally remember the dimension
+        obs_arr = np.array(obs, dtype=np.float32).reshape(1, -1)
         if self.obs_dim is None:
-            self.obs_dim = obs_arr.shape[1]
-
-        # Stable-Baselines3 expects a batch (n_envs, obs_dim)
-        action, _ = self.model.predict(obs_arr, deterministic=True)
-
-        # action can be a numpy array; convert to Python int
-        return int(action[0])
-
-
-# Create a singleton agent instance for easy reuse
+            self.obs_dim = obs_arr.shape[1]
+        action, _ = self.model.predict(obs_arr, deterministic=True)
+        return int(action[0])
 _agent_instance: TradingAgent | None = None
 
 
