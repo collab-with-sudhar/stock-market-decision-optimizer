@@ -1,5 +1,5 @@
 
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
@@ -15,8 +15,8 @@ import tradingRouter from './routes/trading.js';
 import marketRouter from './routes/market.js';
 
 const PORT = process.env.PORT || 4000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/stock_rl';
-
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://sudharachivrawork_db_user:BsvcBcBGq909WKSp@kailainadhar.o8yuxe4.mongodb.net/nix?appName=kailainadhar';
+dotenv.config();
 
 const logger = winston.createLogger({
   level: 'info',
@@ -36,7 +36,7 @@ async function start() {
   const server = http.createServer(app);
 
   const io = new SocketIOServer(server, {
-    cors: { origin: "http://localhost:5173" },
+    cors: { origin: process.env.FRONTEND_URL },
     credentials: true,
   });
 
@@ -44,7 +44,7 @@ async function start() {
   app.locals.logger = logger;
 
   app.use(cors({
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL,
     credentials: true,
   }));
   app.use(express.json());
