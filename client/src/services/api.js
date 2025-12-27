@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://meetup-print-jpg-exist.trycloudflare.com/api",
+  baseURL: "https://api.nix-ai.dev/api",
   timeout: 5000,
 });
 
