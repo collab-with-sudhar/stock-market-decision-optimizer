@@ -14,7 +14,7 @@ export const useWebSocket = () => {
     console.log('[useWebSocket] Initializing global WebSocket connection...');
 
     
-    const socket = io('https://meetup-print-jpg-exist.trycloudflare.com', {
+    const socket = io('https://api.nix-ai.dev/', {
       transports: ['websocket'],
       reconnection: true,
       reconnectionDelay: 1000,
