@@ -14,9 +14,10 @@ import authRouter from './routes/auth.js';
 import tradingRouter from './routes/trading.js';
 import marketRouter from './routes/market.js';
 
-const PORT = process.env.PORT || 4000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://sudharachivrawork_db_user:BsvcBcBGq909WKSp@kailainadhar.o8yuxe4.mongodb.net/nix?appName=kailainadhar';
 dotenv.config();
+const PORT = process.env.PORT || 4000;
+const MONGO_URI = process.env.MONGO_URI ;
+
 
 const logger = winston.createLogger({
   level: 'info',
